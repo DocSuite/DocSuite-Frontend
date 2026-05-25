@@ -29,4 +29,10 @@ export class DocActaService {
   updateActa(actaId: string, payload: ActaUpdatePayload): Observable<Acta> {
     return this.http.patch<Acta>(`${this.apiUrl}/meeting-minutes/${actaId}`, payload);
   }
+
+  downloadActaDocx(actaId: string): Observable<Blob> {
+    return this.http.get(`${this.apiUrl}/meeting-minutes/${actaId}/export/docx`, {
+      responseType: 'blob',
+    });
+  }
 }

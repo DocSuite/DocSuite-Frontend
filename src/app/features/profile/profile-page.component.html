@@ -1,0 +1,40 @@
+<main class="min-h-screen bg-surface-50 p-4 text-surface-900 sm:p-6 lg:p-8">
+  <section class="mx-auto max-w-5xl">
+    <header class="mb-6">
+      <p class="text-sm font-medium text-slate-500">DocSuite / Perfil</p>
+      <h1 class="mt-2 text-2xl font-semibold tracking-normal text-surface-900">Mi perfil</h1>
+      <p class="mt-2 text-sm text-slate-600">Informacion de la cuenta activa y estado del usuario.</p>
+    </header>
+
+    <section class="rounded-xl border border-surface-200 bg-white p-5">
+      <div class="flex flex-col gap-5 sm:flex-row sm:items-center">
+        <div class="flex h-16 w-16 items-center justify-center rounded-full bg-surface-800 text-lg font-semibold text-white">
+          {{ (user()?.full_name || user()?.email || 'DS').slice(0, 2).toUpperCase() }}
+        </div>
+        <div class="min-w-0">
+          <h2 class="text-lg font-semibold text-surface-900">{{ user()?.full_name || 'Usuario DocSuite' }}</h2>
+          <p class="mt-1 text-sm text-slate-500">{{ user()?.email || 'Sesion activa' }}</p>
+        </div>
+      </div>
+
+      <div class="mt-6 grid gap-4 md:grid-cols-2">
+        <div class="rounded-lg border border-surface-200 bg-surface-50 p-4">
+          <p class="text-xs font-semibold uppercase text-slate-500">Estado</p>
+          <p class="mt-2 text-sm font-semibold text-surface-900">{{ user()?.is_active === false ? 'Inactivo' : 'Activo' }}</p>
+        </div>
+        <div class="rounded-lg border border-surface-200 bg-surface-50 p-4">
+          <p class="text-xs font-semibold uppercase text-slate-500">Rol</p>
+          <p class="mt-2 text-sm font-semibold text-surface-900">Administrador academico</p>
+        </div>
+        <div class="rounded-lg border border-surface-200 bg-surface-50 p-4">
+          <p class="text-xs font-semibold uppercase text-slate-500">Fecha de alta</p>
+          <p class="mt-2 text-sm font-semibold text-surface-900">{{ user()?.created_at || 'No disponible' }}</p>
+        </div>
+        <div class="rounded-lg border border-surface-200 bg-surface-50 p-4">
+          <p class="text-xs font-semibold uppercase text-slate-500">Ultima actualizacion</p>
+          <p class="mt-2 text-sm font-semibold text-surface-900">{{ user()?.updated_at || 'No disponible' }}</p>
+        </div>
+      </div>
+    </section>
+  </section>
+</main>

@@ -39,8 +39,9 @@ export interface Acta {
 }
 
 export interface ActaUpdatePayload {
-  result: string;
-  tasks: ActaTask[];
+  transcription?: string;
+  result?: string;
+  tasks?: ActaTask[];
 }
 
 export interface AudioFileInfo {

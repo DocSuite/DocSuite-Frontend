@@ -82,4 +82,15 @@ describe('DocActaService', () => {
       tasks: [],
     });
   });
+
+  it('should download an acta docx', () => {
+    service.downloadActaDocx('acta-1').subscribe((response) => {
+      expect(response instanceof Blob).toBeTrue();
+    });
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/meeting-minutes/acta-1/export/docx`);
+    expect(request.request.method).toBe('GET');
+    expect(request.request.responseType).toBe('blob');
+    request.flush(new Blob(['docx']));
+  });
 });

@@ -1,0 +1,33 @@
+<main class="min-h-screen bg-surface-50 p-4 text-surface-900 sm:p-6 lg:p-8">
+  <section class="mx-auto max-w-6xl">
+    <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-sm font-medium text-slate-500">DocSuite / Auditorias</p>
+        <h1 class="mt-2 text-2xl font-semibold tracking-normal text-surface-900">Auditorias</h1>
+        <p class="mt-2 text-sm text-slate-600">Trazabilidad de acciones relevantes dentro de la plataforma.</p>
+      </div>
+      <span class="inline-flex items-center gap-2 rounded-full border border-surface-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+        <i class="pi pi-shield"></i>
+        {{ records.length }} eventos
+      </span>
+    </header>
+
+    <section class="overflow-hidden rounded-xl border border-surface-200 bg-white">
+      <div class="grid grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_0.7fr] gap-4 border-b border-surface-200 bg-surface-50 px-5 py-3 text-xs font-semibold uppercase text-slate-500">
+        <span>Evento</span>
+        <span>Usuario</span>
+        <span>Modulo</span>
+        <span>Fecha</span>
+        <span>Estado</span>
+      </div>
+
+      <article *ngFor="let record of records" class="grid grid-cols-[1.2fr_1.2fr_0.8fr_0.8fr_0.7fr] gap-4 border-b border-surface-200 px-5 py-4 text-sm last:border-b-0">
+        <span class="font-semibold text-surface-900">{{ record.event }}</span>
+        <span class="truncate text-slate-600">{{ record.user }}</span>
+        <span class="text-slate-600">{{ record.module }}</span>
+        <span class="text-slate-500">{{ record.date }}</span>
+        <span class="font-semibold text-surface-900">{{ record.status }}</span>
+      </article>
+    </section>
+  </section>
+</main>
