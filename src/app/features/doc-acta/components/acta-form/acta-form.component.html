@@ -1,0 +1,30 @@
+<section class="rounded-xl border border-surface-200 bg-white p-5">
+  <div class="mb-5 flex items-start justify-between gap-4">
+    <div>
+      <h2 class="text-base font-semibold tracking-normal text-surface-900">Configuracion del acta</h2>
+      <p class="mt-1 text-sm text-slate-600">El backend usara el audio para transcribir, separar voces y generar el acta.</p>
+    </div>
+    <i class="pi pi-sliders-h text-xl text-brand-600"></i>
+  </div>
+
+  <div class="space-y-3">
+    <div class="rounded-lg border border-surface-200 bg-surface-50 px-4 py-3">
+      <p class="text-xs font-semibold uppercase text-slate-500">Formato</p>
+      <p class="mt-1 text-sm font-medium text-surface-900">Acta universitaria formal</p>
+    </div>
+    <div class="rounded-lg border border-surface-200 bg-surface-50 px-4 py-3">
+      <p class="text-xs font-semibold uppercase text-slate-500">Contenido</p>
+      <p class="mt-1 text-sm font-medium text-surface-900">Acuerdos, responsables y tabla de tareas</p>
+    </div>
+  </div>
+
+  <button
+    class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+    type="button"
+    [disabled]="disabled || !isReady"
+    (click)="startProcessing.emit()"
+  >
+    <i class="pi pi-play"></i>
+    Generar acta
+  </button>
+</section>
