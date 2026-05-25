@@ -9,25 +9,45 @@ export const routes: Routes = [
       import('./features/auth/login/login.component').then((module) => module.LoginComponent),
   },
   {
-    path: 'dashboard',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/dashboard/dashboard-page.component').then(
-        (module) => module.DashboardPageComponent,
-      ),
-  },
-  {
-    path: 'doc-acta',
-    canActivate: [authGuard],
-    loadComponent: () =>
-      import('./features/doc-acta/pages/doc-acta-page.component').then(
-        (module) => module.DocActaPageComponent,
-      ),
-  },
-  {
     path: '',
-    pathMatch: 'full',
-    redirectTo: 'dashboard',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./layout/shell/app-shell.component').then((module) => module.AppShellComponent),
+    children: [
+      {
+        path: 'dashboard',
+        loadComponent: () =>
+          import('./features/dashboard/dashboard-page.component').then(
+            (module) => module.DashboardPageComponent,
+          ),
+      },
+      {
+        path: 'doc-acta',
+        loadComponent: () =>
+          import('./features/doc-acta/pages/doc-acta-page.component').then(
+            (module) => module.DocActaPageComponent,
+          ),
+      },
+      {
+        path: 'profile',
+        loadComponent: () =>
+          import('./features/profile/profile-page.component').then(
+            (module) => module.ProfilePageComponent,
+          ),
+      },
+      {
+        path: 'audits',
+        loadComponent: () =>
+          import('./features/audits/audits-page.component').then(
+            (module) => module.AuditsPageComponent,
+          ),
+      },
+      {
+        path: '',
+        pathMatch: 'full',
+        redirectTo: 'dashboard',
+      },
+    ],
   },
   {
     path: '**',

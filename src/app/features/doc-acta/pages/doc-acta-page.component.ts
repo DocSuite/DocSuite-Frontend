@@ -38,6 +38,7 @@ export class DocActaPageComponent implements OnDestroy {
   readonly acta = signal<Acta | null>(null);
   readonly isLoadingActa = signal(false);
   readonly isSavingActa = signal(false);
+  readonly isSavingTranscription = signal(false);
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
@@ -150,6 +151,27 @@ export class DocActaPageComponent implements OnDestroy {
       error: () => {
         this.isSavingActa.set(false);
         this.errorMessage.set('No se pudieron guardar los cambios del acta.');
+      },
+    });
+  }
+
+  saveTranscription(transcription: string): void {
+    const acta = this.acta();
+    if (!acta) {
+      return;
+    }
+
+    this.isSavingTranscription.set(true);
+    this.errorMessage.set(null);
+
+    this.docActaService.updateActa(acta.id, { transcription }).subscribe({
+      next: (updatedActa) => {
+        this.acta.set(updatedActa);
+        this.isSavingTranscription.set(false);
+      },
+      error: () => {
+        this.isSavingTranscription.set(false);
+        this.errorMessage.set('No se pudo guardar la transcripcion revisada.');
       },
     });
   }

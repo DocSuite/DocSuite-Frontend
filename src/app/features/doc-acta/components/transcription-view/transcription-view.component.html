@@ -1,13 +1,27 @@
 <section class="rounded-xl border border-surface-200 bg-white p-5">
-  <div class="mb-4 flex items-start justify-between gap-4">
+  <div class="mb-5 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
     <div>
       <h2 class="text-base font-semibold tracking-normal text-surface-900">Transcripcion</h2>
-      <p class="mt-1 text-sm text-slate-600">Texto procesado y referencia de participantes detectados.</p>
+      <p class="mt-1 text-sm text-slate-600">Edita el texto y reproduce segmentos detectados por participante.</p>
     </div>
-    <i class="pi pi-align-left text-xl text-brand-600"></i>
+
+    <div class="flex gap-2">
+      <button
+        *ngIf="acta && !isEditing"
+        class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+        type="button"
+        (click)="startEditing()"
+      >
+        <i class="pi pi-pencil"></i>
+        Editar
+      </button>
+      <i class="pi pi-align-left text-xl text-brand-600"></i>
+    </div>
   </div>
 
   <ng-container *ngIf="acta; else processingState">
+    <audio *ngIf="audioUrl" #audioPlayer class="mb-4 w-full" controls [src]="audioUrl"></audio>
+
     <div class="mb-4 grid gap-3 sm:grid-cols-3">
       <div class="rounded-lg border border-surface-200 bg-surface-50 px-4 py-3">
         <p class="text-xs font-semibold uppercase text-slate-500">Duracion</p>
@@ -23,32 +37,76 @@
       </div>
     </div>
 
-    <div class="grid gap-4 2xl:grid-cols-[1fr_280px]">
-      <article class="max-h-[34rem] overflow-auto rounded-lg border border-surface-200 bg-surface-50 p-4">
-        <ng-container *ngIf="paragraphs.length; else emptyTranscription">
-          <p *ngFor="let paragraph of paragraphs" class="mb-4 text-sm leading-6 text-slate-700 last:mb-0">
-            {{ paragraph }}
-          </p>
+    <div class="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
+      <article class="rounded-lg border border-surface-200 bg-surface-50 p-4">
+        <ng-container *ngIf="isEditing; else readTranscription">
+          <textarea
+            class="min-h-[28rem] w-full resize-y rounded-lg border border-surface-200 bg-white px-4 py-3 text-sm leading-7 text-surface-900 outline-none transition-colors focus:border-brand-600"
+            [(ngModel)]="draftTranscription"
+            [disabled]="isSaving"
+          ></textarea>
+
+          <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+            <button
+              class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
+              type="button"
+              [disabled]="isSaving"
+              (click)="cancelEditing()"
+            >
+              Cancelar
+            </button>
+            <button
+              class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              type="button"
+              [disabled]="isSaving || !draftTranscription.trim()"
+              (click)="saveChanges()"
+            >
+              <i class="pi" [ngClass]="isSaving ? 'pi-spin pi-spinner' : 'pi-save'"></i>
+              Guardar transcripcion
+            </button>
+          </div>
         </ng-container>
+
+        <ng-template #readTranscription>
+          <div class="max-h-[34rem] overflow-auto rounded-lg bg-white p-4">
+            <ng-container *ngIf="paragraphs.length; else emptyTranscription">
+              <p *ngFor="let paragraph of paragraphs" class="mb-4 text-sm leading-7 text-slate-700 last:mb-0">
+                {{ paragraph }}
+              </p>
+            </ng-container>
+          </div>
+        </ng-template>
 
         <ng-template #emptyTranscription>
           <p class="text-sm leading-6 text-slate-500">La transcripcion llego vacia desde el backend.</p>
         </ng-template>
       </article>
 
-      <aside class="max-h-[34rem] overflow-auto rounded-lg border border-surface-200 bg-white p-4">
-        <div class="mb-3 flex items-center gap-2 text-sm font-semibold text-surface-900">
-          <i class="pi pi-users text-brand-600"></i>
-          Diarizacion
+      <aside class="rounded-lg border border-surface-200 bg-white p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div class="flex items-center gap-2 text-sm font-semibold text-surface-900">
+            <i class="pi pi-users text-brand-600"></i>
+            Diarizacion
+          </div>
+          <span class="text-xs font-semibold text-slate-500">{{ segments.length }} segmentos</span>
         </div>
 
-        <div *ngIf="segments.length; else emptySegments" class="space-y-3">
-          <div *ngFor="let segment of segments" class="rounded-lg border border-surface-200 bg-surface-50 px-3 py-2">
-            <p class="text-sm font-semibold text-surface-900">{{ segment.speaker }}</p>
-            <p class="mt-1 text-xs font-medium text-slate-500">
+        <div *ngIf="segments.length; else emptySegments" class="max-h-[34rem] space-y-3 overflow-auto pr-1">
+          <button
+            *ngFor="let segment of segments; let index = index; trackBy: trackByIndex"
+            class="w-full rounded-lg border px-3 py-3 text-left transition-colors hover:border-brand-600 hover:bg-surface-50"
+            type="button"
+            [ngClass]="activeSegmentIndex === index ? 'border-brand-600 bg-surface-50' : 'border-surface-200 bg-white'"
+            (click)="playSegment(segment, index)"
+          >
+            <span class="flex items-center justify-between gap-3">
+              <span class="text-sm font-semibold text-surface-900">{{ segment.speaker }}</span>
+              <i class="pi pi-play text-xs text-brand-600"></i>
+            </span>
+            <span class="mt-1 block text-xs font-medium text-slate-500">
               {{ formatTime(segment.start) }} - {{ formatTime(segment.end) }}
-            </p>
-          </div>
+            </span>
+          </button>
         </div>
 
         <ng-template #emptySegments>

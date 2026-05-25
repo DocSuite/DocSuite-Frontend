@@ -1,5 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { of } from 'rxjs';
 
+import { DocActaService } from '../../services/doc-acta.service';
 import { ExportPanelComponent } from './export-panel.component';
 
 describe('ExportPanelComponent', () => {
@@ -9,6 +11,14 @@ describe('ExportPanelComponent', () => {
   beforeEach(async () => {
     await TestBed.configureTestingModule({
       imports: [ExportPanelComponent],
+      providers: [
+        {
+          provide: DocActaService,
+          useValue: {
+            downloadActaDocx: () => of(new Blob(['docx'])),
+          },
+        },
+      ],
     }).compileComponents();
 
     fixture = TestBed.createComponent(ExportPanelComponent);
