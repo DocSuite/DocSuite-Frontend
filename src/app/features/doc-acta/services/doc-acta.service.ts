@@ -1,0 +1,24 @@
+import { HttpClient } from '@angular/common/http';
+import { inject, Injectable } from '@angular/core';
+import { Observable } from 'rxjs';
+
+import { environment } from '../../../../environments/environment';
+import { ActaJob } from '../models/doc-acta.models';
+
+@Injectable({
+  providedIn: 'root',
+})
+export class DocActaService {
+  private readonly http = inject(HttpClient);
+  private readonly apiUrl = environment.apiUrl;
+
+  createJob(file: File): Observable<ActaJob> {
+    const formData = new FormData();
+    formData.append('file', file);
+    return this.http.post<ActaJob>(`${this.apiUrl}/meeting-minutes/jobs`, formData);
+  }
+
+  getJob(jobId: string): Observable<ActaJob> {
+    return this.http.get<ActaJob>(`${this.apiUrl}/meeting-minutes/jobs/${jobId}`);
+  }
+}

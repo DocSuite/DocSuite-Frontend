@@ -17,6 +17,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'doc-acta',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/doc-acta/pages/doc-acta-page.component').then(
+        (module) => module.DocActaPageComponent,
+      ),
+  },
+  {
     path: '',
     pathMatch: 'full',
     redirectTo: 'dashboard',

@@ -1,0 +1,59 @@
+<main class="min-h-screen bg-surface-50 p-4 text-surface-900 sm:p-6 lg:p-8">
+  <section class="mx-auto max-w-7xl">
+    <header class="mb-6 rounded-xl border border-surface-200 bg-white p-5">
+      <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-4">
+          <div class="flex h-12 w-12 items-center justify-center rounded-xl border border-surface-200 bg-surface-50 text-brand-600">
+            <i class="pi pi-microphone text-xl"></i>
+          </div>
+          <div>
+            <p class="text-sm font-medium text-slate-500">DocSuite</p>
+            <h1 class="text-2xl font-semibold tracking-normal text-surface-900">DocActa</h1>
+            <p class="mt-1 text-sm text-slate-600">Transcripcion, diarizacion y acta universitaria desde un audio.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <span class="rounded-full border border-surface-200 bg-surface-50 px-3 py-1 text-xs font-semibold uppercase text-slate-600">
+            {{ job()?.status || 'sin proceso' }}
+          </span>
+          <span class="rounded-full border border-surface-200 bg-white px-3 py-1 text-xs font-semibold uppercase text-slate-600">
+            {{ job()?.progress || 0 }}%
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <p *ngIf="errorMessage()" class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+      {{ errorMessage() }}
+    </p>
+
+    <div class="grid gap-5 lg:grid-cols-[minmax(300px,380px)_1fr]">
+      <aside class="space-y-5">
+        <app-audio-upload
+          [fileInfo]="fileInfo()"
+          [disabled]="isProcessing()"
+          (fileSelected)="onFileSelected($event)"
+          (fileRemoved)="removeFile()"
+        />
+
+        <app-acta-form
+          [disabled]="isProcessing()"
+          [isReady]="canStart()"
+          (startProcessing)="startJob()"
+        />
+      </aside>
+
+      <section class="space-y-5">
+        <app-progress-steps [job]="job()" />
+
+        <div class="grid gap-5 xl:grid-cols-2">
+          <app-transcription-view [job]="job()" />
+          <app-acta-view [job]="job()" />
+        </div>
+
+        <app-export-panel [actaId]="job()?.acta_id || null" />
+      </section>
+    </div>
+  </section>
+</main>
