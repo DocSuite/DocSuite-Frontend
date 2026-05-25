@@ -19,12 +19,17 @@
         </div>
       </div>
 
-      <div class="rounded-lg border border-surface-200 bg-white p-4">
-        <p class="text-sm font-semibold text-surface-900">Pendiente de integrar</p>
-        <p class="mt-2 text-sm leading-6 text-slate-600">
-          El backend ya devuelve el estado del trabajo. El siguiente paso sera exponer un endpoint de detalle del acta para pintar aqui el contenido formal y la tabla de tareas.
-        </p>
-      </div>
+      <article class="max-h-[28rem] overflow-auto rounded-lg border border-surface-200 bg-white p-4">
+        <ng-container *ngIf="resultParagraphs.length; else loadingActa">
+          <p *ngFor="let paragraph of resultParagraphs" class="mb-4 text-sm leading-6 text-slate-700 last:mb-0">
+            {{ paragraph }}
+          </p>
+        </ng-container>
+
+        <ng-template #loadingActa>
+          <p class="text-sm leading-6 text-slate-500">Cargando contenido del acta.</p>
+        </ng-template>
+      </article>
     </ng-container>
 
     <ng-template #pendingState>

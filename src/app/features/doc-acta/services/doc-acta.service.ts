@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import { ActaJob } from '../models/doc-acta.models';
+import { Acta, ActaJob } from '../models/doc-acta.models';
 
 @Injectable({
   providedIn: 'root',
@@ -20,5 +20,9 @@ export class DocActaService {
 
   getJob(jobId: string): Observable<ActaJob> {
     return this.http.get<ActaJob>(`${this.apiUrl}/meeting-minutes/jobs/${jobId}`);
+  }
+
+  getActa(actaId: string): Observable<Acta> {
+    return this.http.get<Acta>(`${this.apiUrl}/meeting-minutes/${actaId}`);
   }
 }

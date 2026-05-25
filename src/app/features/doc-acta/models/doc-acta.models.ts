@@ -16,13 +16,24 @@ export interface ActaTask {
   done: boolean;
 }
 
+export interface DiarizationSegment {
+  speaker: string;
+  start: number;
+  end: number;
+}
+
+export interface ActaDiarization {
+  segments?: DiarizationSegment[];
+}
+
 export interface Acta {
   id: string;
   created_at: string;
   updated_at: string;
   filename: string;
+  duration_seconds: number | null;
   transcription: string;
-  diarization: Record<string, unknown> | null;
+  diarization: ActaDiarization | null;
   result: string;
   tasks: ActaTask[];
 }

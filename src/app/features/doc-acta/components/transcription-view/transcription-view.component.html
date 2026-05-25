@@ -2,25 +2,80 @@
   <div class="mb-4 flex items-start justify-between gap-4">
     <div>
       <h2 class="text-base font-semibold tracking-normal text-surface-900">Transcripcion</h2>
-      <p class="mt-1 text-sm text-slate-600">Vista preliminar del procesamiento del audio.</p>
+      <p class="mt-1 text-sm text-slate-600">Texto procesado y referencia de participantes detectados.</p>
     </div>
     <i class="pi pi-align-left text-xl text-brand-600"></i>
   </div>
 
-  <div class="min-h-40 rounded-lg border border-surface-200 bg-surface-50 p-4">
-    <ng-container [ngSwitch]="job?.status">
-      <p *ngSwitchCase="'running'" class="text-sm leading-6 text-slate-700">
-        {{ job?.message }}
-      </p>
-      <p *ngSwitchCase="'completed'" class="text-sm leading-6 text-slate-700">
-        El acta fue generada. La consulta del texto completo se conectara cuando el backend exponga el detalle por ID.
-      </p>
-      <p *ngSwitchCase="'failed'" class="text-sm leading-6 text-red-700">
-        {{ job?.error || 'No se pudo procesar el audio.' }}
-      </p>
-      <p *ngSwitchDefault class="text-sm leading-6 text-slate-500">
-        Selecciona un audio y genera el acta para ver el avance de la transcripcion.
-      </p>
-    </ng-container>
-  </div>
+  <ng-container *ngIf="acta; else processingState">
+    <div class="mb-4 grid gap-3 sm:grid-cols-3">
+      <div class="rounded-lg border border-surface-200 bg-surface-50 px-4 py-3">
+        <p class="text-xs font-semibold uppercase text-slate-500">Duracion</p>
+        <p class="mt-1 text-sm font-semibold text-surface-900">{{ durationLabel }}</p>
+      </div>
+      <div class="rounded-lg border border-surface-200 bg-surface-50 px-4 py-3">
+        <p class="text-xs font-semibold uppercase text-slate-500">Participantes</p>
+        <p class="mt-1 text-sm font-semibold text-surface-900">{{ speakerCount }}</p>
+      </div>
+      <div class="rounded-lg border border-surface-200 bg-surface-50 px-4 py-3">
+        <p class="text-xs font-semibold uppercase text-slate-500">Segmentos</p>
+        <p class="mt-1 text-sm font-semibold text-surface-900">{{ segments.length }}</p>
+      </div>
+    </div>
+
+    <div class="grid gap-4 2xl:grid-cols-[1fr_280px]">
+      <article class="max-h-[34rem] overflow-auto rounded-lg border border-surface-200 bg-surface-50 p-4">
+        <ng-container *ngIf="paragraphs.length; else emptyTranscription">
+          <p *ngFor="let paragraph of paragraphs" class="mb-4 text-sm leading-6 text-slate-700 last:mb-0">
+            {{ paragraph }}
+          </p>
+        </ng-container>
+
+        <ng-template #emptyTranscription>
+          <p class="text-sm leading-6 text-slate-500">La transcripcion llego vacia desde el backend.</p>
+        </ng-template>
+      </article>
+
+      <aside class="max-h-[34rem] overflow-auto rounded-lg border border-surface-200 bg-white p-4">
+        <div class="mb-3 flex items-center gap-2 text-sm font-semibold text-surface-900">
+          <i class="pi pi-users text-brand-600"></i>
+          Diarizacion
+        </div>
+
+        <div *ngIf="segments.length; else emptySegments" class="space-y-3">
+          <div *ngFor="let segment of segments" class="rounded-lg border border-surface-200 bg-surface-50 px-3 py-2">
+            <p class="text-sm font-semibold text-surface-900">{{ segment.speaker }}</p>
+            <p class="mt-1 text-xs font-medium text-slate-500">
+              {{ formatTime(segment.start) }} - {{ formatTime(segment.end) }}
+            </p>
+          </div>
+        </div>
+
+        <ng-template #emptySegments>
+          <p class="text-sm leading-6 text-slate-500">No hay segmentos de participantes para este audio.</p>
+        </ng-template>
+      </aside>
+    </div>
+  </ng-container>
+
+  <ng-template #processingState>
+    <div class="min-h-40 rounded-lg border border-surface-200 bg-surface-50 p-4">
+      <ng-container [ngSwitch]="job?.status">
+        <div *ngSwitchCase="'running'" class="flex items-center gap-3 text-sm leading-6 text-slate-700">
+          <i class="pi pi-spin pi-spinner text-brand-600"></i>
+          <span>{{ job?.message }}</span>
+        </div>
+        <div *ngSwitchCase="'completed'" class="flex items-center gap-3 text-sm leading-6 text-slate-700">
+          <i class="pi pi-spin pi-spinner text-brand-600" *ngIf="isLoading"></i>
+          <span>Cargando la transcripcion generada.</span>
+        </div>
+        <p *ngSwitchCase="'failed'" class="text-sm leading-6 text-red-700">
+          {{ job?.error || 'No se pudo procesar el audio.' }}
+        </p>
+        <p *ngSwitchDefault class="text-sm leading-6 text-slate-500">
+          Selecciona un audio y genera el acta para ver la transcripcion.
+        </p>
+      </ng-container>
+    </div>
+  </ng-template>
 </section>
