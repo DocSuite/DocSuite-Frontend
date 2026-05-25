@@ -58,7 +58,12 @@
 
         <div class="grid gap-5 xl:grid-cols-2">
           <app-transcription-view [job]="job()" [acta]="acta()" [isLoading]="isLoadingActa()" />
-          <app-acta-view [job]="job()" [acta]="acta()" />
+          <app-acta-view
+            [job]="job()"
+            [acta]="acta()"
+            [isSaving]="isSavingActa()"
+            (saveActa)="saveActa($event)"
+          />
         </div>
 
         <app-export-panel [actaId]="job()?.acta_id || null" />

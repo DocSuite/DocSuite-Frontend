@@ -38,6 +38,11 @@ export interface Acta {
   tasks: ActaTask[];
 }
 
+export interface ActaUpdatePayload {
+  result: string;
+  tasks: ActaTask[];
+}
+
 export interface AudioFileInfo {
   name: string;
   sizeLabel: string;

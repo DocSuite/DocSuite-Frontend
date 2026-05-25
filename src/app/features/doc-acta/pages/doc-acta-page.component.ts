@@ -9,7 +9,7 @@ import { AudioUploadComponent } from '../components/audio-upload/audio-upload.co
 import { ExportPanelComponent } from '../components/export-panel/export-panel.component';
 import { ProgressStepsComponent } from '../components/progress-steps/progress-steps.component';
 import { TranscriptionViewComponent } from '../components/transcription-view/transcription-view.component';
-import { Acta, ActaJob, AudioFileInfo } from '../models/doc-acta.models';
+import { Acta, ActaJob, ActaUpdatePayload, AudioFileInfo } from '../models/doc-acta.models';
 import { DocActaService } from '../services/doc-acta.service';
 
 @Component({
@@ -37,6 +37,7 @@ export class DocActaPageComponent implements OnDestroy {
   readonly job = signal<ActaJob | null>(null);
   readonly acta = signal<Acta | null>(null);
   readonly isLoadingActa = signal(false);
+  readonly isSavingActa = signal(false);
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
@@ -128,6 +129,27 @@ export class DocActaPageComponent implements OnDestroy {
       error: () => {
         this.isLoadingActa.set(false);
         this.errorMessage.set('El acta fue creada, pero no se pudo cargar la transcripcion.');
+      },
+    });
+  }
+
+  saveActa(payload: ActaUpdatePayload): void {
+    const acta = this.acta();
+    if (!acta) {
+      return;
+    }
+
+    this.isSavingActa.set(true);
+    this.errorMessage.set(null);
+
+    this.docActaService.updateActa(acta.id, payload).subscribe({
+      next: (updatedActa) => {
+        this.acta.set(updatedActa);
+        this.isSavingActa.set(false);
+      },
+      error: () => {
+        this.isSavingActa.set(false);
+        this.errorMessage.set('No se pudieron guardar los cambios del acta.');
       },
     });
   }

@@ -61,4 +61,25 @@ describe('DocActaService', () => {
       tasks: [],
     });
   });
+
+  it('should update an acta', () => {
+    service.updateActa('acta-1', { result: 'Acta editada', tasks: [] }).subscribe((response) => {
+      expect(response.result).toBe('Acta editada');
+    });
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/meeting-minutes/acta-1`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ result: 'Acta editada', tasks: [] });
+    request.flush({
+      id: 'acta-1',
+      created_at: '2026-05-24T00:00:00Z',
+      updated_at: '2026-05-24T00:00:00Z',
+      filename: 'meeting.mp3',
+      duration_seconds: 60,
+      transcription: 'Texto transcrito',
+      diarization: { segments: [] },
+      result: 'Acta editada',
+      tasks: [],
+    });
+  });
 });
