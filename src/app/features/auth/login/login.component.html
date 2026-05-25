@@ -1,0 +1,105 @@
+<main class="min-h-screen bg-surface-50 text-surface-900">
+  <div class="grid min-h-screen lg:grid-cols-[minmax(420px,520px)_1fr]">
+    <section class="flex items-center justify-center border-r border-surface-200 bg-white px-6 py-10">
+      <div class="w-full max-w-sm">
+        <div class="mb-9">
+          <div class="mb-5 flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-surface-200 bg-surface-50 text-brand-600">
+              <i class="pi pi-file-edit text-lg"></i>
+            </div>
+            <div>
+              <p class="text-base font-semibold tracking-normal text-surface-900">DocSuite</p>
+              <p class="text-xs font-medium text-slate-500">Productividad académica</p>
+            </div>
+          </div>
+
+          <h1 class="text-2xl font-semibold tracking-normal text-surface-900">Inicia sesión</h1>
+          <p class="mt-2 text-sm leading-6 text-slate-600">
+            Accede a DocAnalyzer y DocActa desde tu espacio de trabajo académico.
+          </p>
+        </div>
+
+        <form class="space-y-5" [formGroup]="form" (ngSubmit)="submit()">
+          <label class="block">
+            <span class="mb-2 block text-sm font-medium text-surface-800">Correo institucional</span>
+            <span class="relative block">
+              <i class="pi pi-envelope pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+              <input
+                class="h-11 w-full rounded-lg border border-surface-200 bg-white pl-9 pr-3 text-sm text-surface-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-600"
+                type="email"
+                formControlName="email"
+                autocomplete="email"
+                placeholder="admin@docsuite.edu.pe"
+              />
+            </span>
+            <span *ngIf="hasFieldError('email')" class="mt-1.5 block text-xs font-medium text-red-600">
+              Ingresa un correo válido.
+            </span>
+          </label>
+
+          <label class="block">
+            <span class="mb-2 block text-sm font-medium text-surface-800">Contraseña</span>
+            <span class="relative block">
+              <i class="pi pi-lock pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+              <input
+                class="h-11 w-full rounded-lg border border-surface-200 bg-white pl-9 pr-3 text-sm text-surface-900 outline-none transition-colors placeholder:text-slate-400 focus:border-brand-600"
+                type="password"
+                formControlName="password"
+                autocomplete="current-password"
+                placeholder="Ingresa tu contraseña"
+              />
+            </span>
+            <span *ngIf="hasFieldError('password')" class="mt-1.5 block text-xs font-medium text-red-600">
+              La contraseña debe tener al menos 8 caracteres.
+            </span>
+          </label>
+
+          <div *ngIf="errorMessage()" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+            {{ errorMessage() }}
+          </div>
+
+          <button
+            class="flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+            type="submit"
+            [disabled]="isSubmitting()"
+          >
+            <i class="pi" [ngClass]="isSubmitting() ? 'pi-spin pi-spinner' : 'pi-sign-in'"></i>
+            <span>{{ isSubmitting() ? 'Validando acceso' : 'Entrar' }}</span>
+          </button>
+        </form>
+      </div>
+    </section>
+
+    <section class="hidden bg-surface-50 px-10 py-10 lg:flex lg:items-center">
+      <div class="max-w-2xl">
+        <p class="mb-3 inline-flex items-center gap-2 rounded-full border border-surface-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+          <i class="pi pi-shield text-brand-600"></i>
+          Plataforma interna
+        </p>
+        <h2 class="max-w-xl text-3xl font-semibold leading-tight tracking-normal text-surface-900">
+          Documentos, audios y actas académicas en un flujo ordenado.
+        </h2>
+        <div class="mt-8 grid max-w-xl gap-3">
+          <div class="rounded-xl border border-surface-200 bg-white p-4">
+            <div class="flex items-start gap-3">
+              <i class="pi pi-microphone mt-1 text-brand-600"></i>
+              <div>
+                <p class="text-sm font-semibold text-surface-900">DocActa</p>
+                <p class="mt-1 text-sm leading-6 text-slate-600">Transcribe reuniones, identifica participantes y genera actas con seguimiento de tareas.</p>
+              </div>
+            </div>
+          </div>
+          <div class="rounded-xl border border-surface-200 bg-white p-4">
+            <div class="flex items-start gap-3">
+              <i class="pi pi-file text-brand-600"></i>
+              <div>
+                <p class="text-sm font-semibold text-surface-900">DocAnalyzer</p>
+                <p class="mt-1 text-sm leading-6 text-slate-600">Extrae información clave en modo general o académico para papers, tesis e informes.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</main>
