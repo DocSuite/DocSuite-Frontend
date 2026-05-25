@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { Subscription, switchMap, takeWhile, timer } from 'rxjs';
 
 import { ActaFormComponent } from '../components/acta-form/acta-form.component';
@@ -8,7 +9,7 @@ import { AudioUploadComponent } from '../components/audio-upload/audio-upload.co
 import { ExportPanelComponent } from '../components/export-panel/export-panel.component';
 import { ProgressStepsComponent } from '../components/progress-steps/progress-steps.component';
 import { TranscriptionViewComponent } from '../components/transcription-view/transcription-view.component';
-import { ActaJob, AudioFileInfo } from '../models/doc-acta.models';
+import { Acta, ActaJob, AudioFileInfo } from '../models/doc-acta.models';
 import { DocActaService } from '../services/doc-acta.service';
 
 @Component({
@@ -16,6 +17,7 @@ import { DocActaService } from '../services/doc-acta.service';
   standalone: true,
   imports: [
     CommonModule,
+    RouterLink,
     ActaFormComponent,
     ActaViewComponent,
     AudioUploadComponent,
@@ -33,6 +35,8 @@ export class DocActaPageComponent implements OnDestroy {
   readonly selectedFile = signal<File | null>(null);
   readonly fileInfo = signal<AudioFileInfo | null>(null);
   readonly job = signal<ActaJob | null>(null);
+  readonly acta = signal<Acta | null>(null);
+  readonly isLoadingActa = signal(false);
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
@@ -51,6 +55,7 @@ export class DocActaPageComponent implements OnDestroy {
       extension: this.getExtension(file.name),
     });
     this.job.set(null);
+    this.acta.set(null);
     this.errorMessage.set(null);
   }
 
@@ -62,6 +67,7 @@ export class DocActaPageComponent implements OnDestroy {
     this.selectedFile.set(null);
     this.fileInfo.set(null);
     this.job.set(null);
+    this.acta.set(null);
     this.errorMessage.set(null);
   }
 
@@ -72,6 +78,7 @@ export class DocActaPageComponent implements OnDestroy {
     }
 
     this.isSubmitting.set(true);
+    this.acta.set(null);
     this.errorMessage.set(null);
     this.pollingSubscription?.unsubscribe();
 
@@ -98,6 +105,9 @@ export class DocActaPageComponent implements OnDestroy {
       .subscribe({
         next: (job) => {
           this.job.set(job);
+          if (job.status === 'completed' && job.acta_id) {
+            this.loadActa(job.acta_id);
+          }
           if (job.status === 'failed') {
             this.errorMessage.set(job.error || 'No se pudo completar el procesamiento.');
           }
@@ -106,6 +116,20 @@ export class DocActaPageComponent implements OnDestroy {
           this.errorMessage.set('No se pudo consultar el progreso del procesamiento.');
         },
       });
+  }
+
+  private loadActa(actaId: string): void {
+    this.isLoadingActa.set(true);
+    this.docActaService.getActa(actaId).subscribe({
+      next: (acta) => {
+        this.acta.set(acta);
+        this.isLoadingActa.set(false);
+      },
+      error: () => {
+        this.isLoadingActa.set(false);
+        this.errorMessage.set('El acta fue creada, pero no se pudo cargar la transcripcion.');
+      },
+    });
   }
 
   private formatFileSize(size: number): string {

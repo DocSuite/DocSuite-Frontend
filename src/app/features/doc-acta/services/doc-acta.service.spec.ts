@@ -40,4 +40,25 @@ describe('DocActaService', () => {
       error: null,
     });
   });
+
+  it('should get an acta by id', () => {
+    service.getActa('acta-1').subscribe((response) => {
+      expect(response.id).toBe('acta-1');
+      expect(response.transcription).toBe('Texto transcrito');
+    });
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/meeting-minutes/acta-1`);
+    expect(request.request.method).toBe('GET');
+    request.flush({
+      id: 'acta-1',
+      created_at: '2026-05-24T00:00:00Z',
+      updated_at: '2026-05-24T00:00:00Z',
+      filename: 'meeting.mp3',
+      duration_seconds: 60,
+      transcription: 'Texto transcrito',
+      diarization: { segments: [] },
+      result: 'Acta',
+      tasks: [],
+    });
+  });
 });

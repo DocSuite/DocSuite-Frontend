@@ -19,4 +19,8 @@ describe('TranscriptionViewComponent', () => {
   it('should create', () => {
     expect(component).toBeTruthy();
   });
+
+  it('should format duration as minutes and seconds', () => {
+    expect(component.formatTime(65)).toBe('1:05');
+  });
 });
