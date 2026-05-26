@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { Acta, ActaJob, ActaTask, ActaUpdatePayload } from '../../models/doc-acta.models';
 
 @Component({
@@ -12,6 +13,8 @@ import { Acta, ActaJob, ActaTask, ActaUpdatePayload } from '../../models/doc-act
   styleUrl: './acta-view.component.scss',
 })
 export class ActaViewComponent implements OnChanges {
+  private readonly confirmDialogService = inject(ConfirmDialogService);
+
   @Input() job: ActaJob | null = null;
   @Input() acta: Acta | null = null;
   @Input() isSaving = false;
@@ -55,7 +58,18 @@ export class ActaViewComponent implements OnChanges {
     this.isEditing = true;
   }
 
-  cancelEditing(): void {
+  async cancelEditing(): Promise<void> {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Descartar cambios',
+      message: 'Se perderán los ajustes realizados en el acta.',
+      confirmLabel: 'Descartar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     this.isEditing = false;
     this.resetDraft();
   }
@@ -72,7 +86,18 @@ export class ActaViewComponent implements OnChanges {
     ];
   }
 
-  removeTask(index: number): void {
+  async removeTask(index: number): Promise<void> {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Quitar tarea',
+      message: 'Esta tarea se eliminará del borrador del acta.',
+      confirmLabel: 'Quitar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     this.draftTasks = this.draftTasks.filter((_, currentIndex) => currentIndex !== index);
   }
 

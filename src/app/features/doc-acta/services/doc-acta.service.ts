@@ -3,7 +3,7 @@ import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 
 import { environment } from '../../../../environments/environment';
-import { Acta, ActaJob, ActaUpdatePayload } from '../models/doc-acta.models';
+import { Acta, ActaJob, ActaUpdatePayload, SpeakerNamePayload } from '../models/doc-acta.models';
 
 @Injectable({
   providedIn: 'root',
@@ -28,6 +28,10 @@ export class DocActaService {
 
   updateActa(actaId: string, payload: ActaUpdatePayload): Observable<Acta> {
     return this.http.patch<Acta>(`${this.apiUrl}/meeting-minutes/${actaId}`, payload);
+  }
+
+  updateSpeakerNames(actaId: string, payload: SpeakerNamePayload): Observable<Acta> {
+    return this.http.patch<Acta>(`${this.apiUrl}/meeting-minutes/${actaId}/speakers`, payload);
   }
 
   downloadActaDocx(actaId: string): Observable<Blob> {

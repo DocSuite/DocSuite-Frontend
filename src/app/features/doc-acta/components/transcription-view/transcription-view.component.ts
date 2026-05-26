@@ -9,9 +9,11 @@ import {
   Output,
   SimpleChanges,
   ViewChild,
+  inject,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
+import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
 import { Acta, ActaJob, DiarizationSegment } from '../../models/doc-acta.models';
 
 @Component({
@@ -23,17 +25,22 @@ import { Acta, ActaJob, DiarizationSegment } from '../../models/doc-acta.models'
 })
 export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   @ViewChild('audioPlayer') audioPlayer?: ElementRef<HTMLAudioElement>;
+  private readonly confirmDialogService = inject(ConfirmDialogService);
 
   @Input() job: ActaJob | null = null;
   @Input() acta: Acta | null = null;
   @Input() audioFile: File | null = null;
   @Input() isLoading = false;
   @Input() isSaving = false;
+  @Input() isSavingSpeakers = false;
   @Output() saveTranscription = new EventEmitter<string>();
+  @Output() saveSpeakers = new EventEmitter<Record<string, string>>();
 
   audioUrl: string | null = null;
   isEditing = false;
+  isRenamingSpeakers = false;
   draftTranscription = '';
+  speakerDraft: Record<string, string> = {};
   activeSegmentIndex: number | null = null;
 
   get paragraphs(): string[] {
@@ -54,6 +61,10 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
 
   get speakerCount(): number {
     return new Set(this.segments.map((segment) => segment.speaker)).size;
+  }
+
+  get speakers(): string[] {
+    return Array.from(new Set(this.segments.map((segment) => segment.speaker))).sort();
   }
 
   get durationLabel(): string {
@@ -90,7 +101,20 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
     this.isEditing = true;
   }
 
-  cancelEditing(): void {
+  async cancelEditing(): Promise<void> {
+    if (this.draftTranscription.trim() !== (this.acta?.transcription ?? '').trim()) {
+      const confirmed = await this.confirmDialogService.confirm({
+        title: 'Descartar cambios',
+        message: 'Se perderán los ajustes que hiciste en la transcripción.',
+        confirmLabel: 'Descartar',
+        tone: 'danger',
+      });
+
+      if (!confirmed) {
+        return;
+      }
+    }
+
     this.draftTranscription = this.acta?.transcription ?? '';
     this.isEditing = false;
   }
@@ -102,6 +126,40 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   finishSaving(): void {
     this.isEditing = false;
     this.draftTranscription = this.acta?.transcription ?? '';
+  }
+
+  openSpeakerEditor(): void {
+    this.speakerDraft = this.speakers.reduce<Record<string, string>>((draft, speaker) => {
+      draft[speaker] = speaker;
+      return draft;
+    }, {});
+    this.isRenamingSpeakers = true;
+  }
+
+  async closeSpeakerEditor(): Promise<void> {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Cerrar edición',
+      message: 'Se descartarán los nombres de participantes que todavía no guardaste.',
+      confirmLabel: 'Cerrar',
+      tone: 'danger',
+    });
+
+    if (confirmed) {
+      this.isRenamingSpeakers = false;
+    }
+  }
+
+  saveSpeakerNames(): void {
+    const names = Object.entries(this.speakerDraft).reduce<Record<string, string>>((payload, [speaker, name]) => {
+      const cleanName = name.trim();
+      if (cleanName) {
+        payload[speaker] = cleanName;
+      }
+      return payload;
+    }, {});
+
+    this.saveSpeakers.emit(names);
+    this.isRenamingSpeakers = false;
   }
 
   playSegment(segment: DiarizationSegment, index: number): void {

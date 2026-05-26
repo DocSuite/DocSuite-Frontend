@@ -1,8 +1,10 @@
 import { CommonModule } from '@angular/common';
+import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Subscription, switchMap, takeWhile, timer } from 'rxjs';
 
+import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { ActaFormComponent } from '../components/acta-form/acta-form.component';
 import { ActaViewComponent } from '../components/acta-view/acta-view.component';
 import { AudioUploadComponent } from '../components/audio-upload/audio-upload.component';
@@ -30,6 +32,7 @@ import { DocActaService } from '../services/doc-acta.service';
 })
 export class DocActaPageComponent implements OnDestroy {
   private readonly docActaService = inject(DocActaService);
+  private readonly confirmDialogService = inject(ConfirmDialogService);
   private pollingSubscription?: Subscription;
 
   readonly selectedFile = signal<File | null>(null);
@@ -39,6 +42,7 @@ export class DocActaPageComponent implements OnDestroy {
   readonly isLoadingActa = signal(false);
   readonly isSavingActa = signal(false);
   readonly isSavingTranscription = signal(false);
+  readonly isSavingSpeakers = signal(false);
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
 
@@ -61,8 +65,19 @@ export class DocActaPageComponent implements OnDestroy {
     this.errorMessage.set(null);
   }
 
-  removeFile(): void {
+  async removeFile(): Promise<void> {
     if (this.isProcessing()) {
+      return;
+    }
+
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Quitar audio',
+      message: 'Se limpiará el audio seleccionado y el resultado actual de DocActa.',
+      confirmLabel: 'Quitar audio',
+      tone: 'danger',
+    });
+
+    if (!confirmed) {
       return;
     }
 
@@ -90,9 +105,9 @@ export class DocActaPageComponent implements OnDestroy {
         this.isSubmitting.set(false);
         this.pollJob(job.job_id);
       },
-      error: () => {
+      error: (error) => {
         this.isSubmitting.set(false);
-        this.errorMessage.set('No se pudo iniciar el procesamiento del audio.');
+        this.errorMessage.set(this.getErrorMessage(error, 'No se pudo iniciar el procesamiento del audio.'));
       },
     });
   }
@@ -114,8 +129,8 @@ export class DocActaPageComponent implements OnDestroy {
             this.errorMessage.set(job.error || 'No se pudo completar el procesamiento.');
           }
         },
-        error: () => {
-          this.errorMessage.set('No se pudo consultar el progreso del procesamiento.');
+        error: (error) => {
+          this.errorMessage.set(this.getErrorMessage(error, 'No se pudo consultar el progreso del procesamiento.'));
         },
       });
   }
@@ -127,9 +142,9 @@ export class DocActaPageComponent implements OnDestroy {
         this.acta.set(acta);
         this.isLoadingActa.set(false);
       },
-      error: () => {
+      error: (error) => {
         this.isLoadingActa.set(false);
-        this.errorMessage.set('El acta fue creada, pero no se pudo cargar la transcripcion.');
+        this.errorMessage.set(this.getErrorMessage(error, 'El acta fue creada, pero no se pudo cargar la transcripcion.'));
       },
     });
   }
@@ -148,9 +163,9 @@ export class DocActaPageComponent implements OnDestroy {
         this.acta.set(updatedActa);
         this.isSavingActa.set(false);
       },
-      error: () => {
+      error: (error) => {
         this.isSavingActa.set(false);
-        this.errorMessage.set('No se pudieron guardar los cambios del acta.');
+        this.errorMessage.set(this.getErrorMessage(error, 'No se pudieron guardar los cambios del acta.'));
       },
     });
   }
@@ -169,9 +184,29 @@ export class DocActaPageComponent implements OnDestroy {
         this.acta.set(updatedActa);
         this.isSavingTranscription.set(false);
       },
-      error: () => {
+      error: (error) => {
         this.isSavingTranscription.set(false);
-        this.errorMessage.set('No se pudo guardar la transcripcion revisada.');
+        this.errorMessage.set(this.getErrorMessage(error, 'No se pudo guardar la transcripcion revisada.'));
+      },
+    });
+  }
+
+  saveSpeakerNames(names: Record<string, string>): void {
+    const acta = this.acta();
+    if (!acta) {
+      return;
+    }
+
+    this.isSavingSpeakers.set(true);
+    this.errorMessage.set(null);
+    this.docActaService.updateSpeakerNames(acta.id, { names }).subscribe({
+      next: (updatedActa) => {
+        this.acta.set(updatedActa);
+        this.isSavingSpeakers.set(false);
+      },
+      error: (error) => {
+        this.isSavingSpeakers.set(false);
+        this.errorMessage.set(this.getErrorMessage(error, 'No se pudieron actualizar los participantes.'));
       },
     });
   }
@@ -187,6 +222,19 @@ export class DocActaPageComponent implements OnDestroy {
   private getExtension(filename: string): string {
     const extension = filename.split('.').pop();
     return extension ? extension.toUpperCase() : 'AUDIO';
+  }
+
+  private getErrorMessage(error: unknown, fallback: string): string {
+    if (!(error instanceof HttpErrorResponse)) {
+      return fallback;
+    }
+
+    if (error.status === 429) {
+      return 'DocActa ya tiene un procesamiento en curso. Espera a que termine antes de iniciar otro.';
+    }
+
+    const detail = error.error?.detail;
+    return typeof detail === 'string' ? detail : fallback;
   }
 
   ngOnDestroy(): void {
