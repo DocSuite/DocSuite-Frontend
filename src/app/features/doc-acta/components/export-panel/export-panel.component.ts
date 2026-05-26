@@ -150,8 +150,8 @@ export class ExportPanelComponent {
           `${contentObject} 0 obj << /Length ${content.length} >> stream\n${content}\nendstream endobj`,
         ];
       }),
-      `${3 + pages.length * 2} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj`,
-      `${4 + pages.length * 2} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj`,
+      `${3 + pages.length * 2} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >> endobj`,
+      `${4 + pages.length * 2} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >> endobj`,
     ];
 
     let pdf = '%PDF-1.4\n';
@@ -185,7 +185,7 @@ export class ExportPanelComponent {
         };
       }
 
-      if (/^\*\*.+\*\*:/.test(line) || /^[A-ZÁÉÍÓÚÑ][^:]{2,40}:/.test(line)) {
+      if (/^\*\*.+\*\*:/.test(line) || /^[A-Z\u00C1\u00C9\u00CD\u00D3\u00DA\u00D1][^:]{2,40}:/.test(line)) {
         return {
           type: 'label',
           lines: this.wrapText(this.cleanMarkdown(line), maxWidth, 10),
@@ -233,16 +233,28 @@ export class ExportPanelComponent {
   }
 
   private toPdfString(text: string): string {
-    return text
-      .replace(/[“”]/g, '"')
-      .replace(/[‘’]/g, "'")
-      .replace(/[–—]/g, '-')
-      .replace(/☐/g, '[ ]')
-      .replace(/☑/g, '[x]')
+    return this.normalizePdfText(text)
       .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '')
       .replace(/\\/g, '\\\\')
       .replace(/\(/g, '\\(')
       .replace(/\)/g, '\\)');
+  }
+
+  private normalizePdfText(text: string): string {
+    return text
+      .replace(/[\u201C\u201D\u201E\u00AB\u00BB]/g, '"')
+      .replace(/[\u2018\u2019\u201A]/g, "'")
+      .replace(/[\u2013\u2014\u2212]/g, '-')
+      .replace(/\u2026/g, '...')
+      .replace(/\u2022/g, '-')
+      .replace(/\u00B7/g, '-')
+      .replace(/\u2610/g, '[ ]')
+      .replace(/\u2611/g, '[x]')
+      .replace(/\u2713/g, 'x')
+      .replace(/\u2714/g, 'x')
+      .replace(/\u20AC/g, 'EUR')
+      .replace(/\u2122/g, '(TM)')
+      .replace(/\u00A0/g, ' ');
   }
 
   private toPdfBytes(pdf: string): Uint8Array {

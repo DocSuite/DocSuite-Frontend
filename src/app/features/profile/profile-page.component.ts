@@ -15,11 +15,34 @@ export class ProfilePageComponent implements OnInit {
   private readonly authService = inject(AuthService);
 
   readonly user = signal<User | null>(null);
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
 
   ngOnInit(): void {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
     this.authService.me().subscribe({
-      next: (user) => this.user.set(user),
-      error: () => this.user.set(null),
+      next: (user) => {
+        this.user.set(user);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.user.set(null);
+        this.errorMessage.set('No se pudo cargar la informacion del perfil.');
+        this.isLoading.set(false);
+      },
     });
+  }
+
+  formatDate(value: string | undefined): string {
+    if (!value) {
+      return 'No disponible';
+    }
+
+    return new Intl.DateTimeFormat('es-PE', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
   }
 }

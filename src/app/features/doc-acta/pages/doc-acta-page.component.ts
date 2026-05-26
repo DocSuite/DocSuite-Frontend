@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { Component, HostListener, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, switchMap, takeWhile, timer } from 'rxjs';
 
@@ -323,6 +323,39 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
 
   closeActaPanel(): void {
     this.isActaPanelOpen.set(false);
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handleKeyboardShortcut(event: KeyboardEvent): void {
+    if (this.isTypingTarget(event.target)) {
+      return;
+    }
+
+    if (event.key === 'Escape' && this.isActaPanelOpen()) {
+      event.preventDefault();
+      this.closeActaPanel();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && this.canStart()) {
+      event.preventDefault();
+      this.startJob();
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.shiftKey && event.key.toLowerCase() === 'a' && this.acta()) {
+      event.preventDefault();
+      this.isActaPanelOpen.update((value) => !value);
+    }
+  }
+
+  private isTypingTarget(target: EventTarget | null): boolean {
+    const element = target as HTMLElement | null;
+    if (!element) {
+      return false;
+    }
+
+    return ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName) || element.isContentEditable;
   }
 
   private formatFileSize(size: number): string {
