@@ -145,11 +145,48 @@
       </ng-container>
 
       <ng-template #readMode>
-        <article class="max-h-[28rem] overflow-auto rounded-lg border border-surface-200 bg-white p-4">
-          <ng-container *ngIf="resultParagraphs.length; else loadingActa">
-            <p *ngFor="let paragraph of resultParagraphs" class="mb-4 text-sm leading-6 text-slate-700 last:mb-0">
-              {{ paragraph }}
-            </p>
+        <article class="max-h-[calc(100vh-13rem)] overflow-auto rounded-lg border border-surface-200 bg-white px-6 py-6">
+          <ng-container *ngIf="renderedBlocks.length; else loadingActa">
+            <div class="mx-auto max-w-3xl">
+              <ng-container *ngFor="let block of renderedBlocks; trackBy: trackByIndex">
+                <h1 *ngIf="block.type === 'title'" class="mb-6 text-3xl font-semibold tracking-normal text-surface-900">
+                  {{ block.text }}
+                </h1>
+
+                <h2 *ngIf="block.type === 'heading'" class="mb-3 mt-8 text-2xl font-semibold tracking-normal text-surface-900">
+                  {{ block.text }}
+                </h2>
+
+                <h3 *ngIf="block.type === 'subheading'" class="mb-2 mt-5 text-base font-semibold tracking-normal text-surface-900">
+                  {{ block.text }}
+                </h3>
+
+                <div *ngIf="block.type === 'property'" class="mb-3 grid gap-2 text-sm sm:grid-cols-[170px_minmax(0,1fr)]">
+                  <span class="font-semibold text-slate-500">{{ block.label }}</span>
+                  <span class="font-medium text-surface-900">{{ block.value }}</span>
+                </div>
+
+                <p *ngIf="block.type === 'paragraph'" class="mb-4 text-sm leading-7 text-slate-700">
+                  {{ block.text }}
+                </p>
+
+                <div *ngIf="block.type === 'bullet'" class="mb-2 flex gap-3 text-sm leading-7 text-slate-700">
+                  <span class="mt-0.5 text-slate-500">•</span>
+                  <span>{{ block.text }}</span>
+                </div>
+
+                <div *ngIf="block.type === 'number'" class="mb-2 text-sm font-semibold leading-7 text-surface-900">
+                  {{ block.text }}
+                </div>
+
+                <label *ngIf="block.type === 'task'" class="mb-2 flex items-start gap-3 text-sm leading-7 text-slate-700">
+                  <input class="mt-1 h-4 w-4 rounded border-surface-200 text-brand-600" type="checkbox" [checked]="block.checked" disabled />
+                  <span>{{ block.text }}</span>
+                </label>
+
+                <hr *ngIf="block.type === 'divider'" class="my-6 border-surface-200" />
+              </ng-container>
+            </div>
           </ng-container>
 
           <ng-template #loadingActa>
