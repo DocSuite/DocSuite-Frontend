@@ -4,6 +4,7 @@ import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthService } from '../../core/auth/auth.service';
 import { User } from '../../core/auth/auth.models';
+import { ConfirmDialogService } from '../../core/services/confirm-dialog.service';
 
 interface SidebarItem {
   label: string;
@@ -22,6 +23,7 @@ interface SidebarItem {
 })
 export class SidebarComponent implements OnInit {
   private readonly authService = inject(AuthService);
+  private readonly confirmDialogService = inject(ConfirmDialogService);
   private readonly router = inject(Router);
 
   readonly user = signal<User | null>(null);
@@ -60,7 +62,18 @@ export class SidebarComponent implements OnInit {
     return this.user()?.email || 'sesion activa';
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Cerrar sesión',
+      message: 'Tendrás que volver a ingresar tus credenciales para usar DocSuite.',
+      confirmLabel: 'Cerrar sesión',
+      tone: 'danger',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
     this.authService.logout();
     this.router.navigate(['/login']);
   }

@@ -63,7 +63,9 @@
             [audioFile]="selectedFile()"
             [isLoading]="isLoadingActa()"
             [isSaving]="isSavingTranscription()"
+            [isSavingSpeakers]="isSavingSpeakers()"
             (saveTranscription)="saveTranscription($event)"
+            (saveSpeakers)="saveSpeakerNames($event)"
           />
           <app-acta-view
             class="hidden xl:block"

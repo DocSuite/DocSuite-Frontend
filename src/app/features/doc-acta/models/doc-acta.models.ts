@@ -44,6 +44,10 @@ export interface ActaUpdatePayload {
   tasks?: ActaTask[];
 }
 
+export interface SpeakerNamePayload {
+  names: Record<string, string>;
+}
+
 export interface AudioFileInfo {
   name: string;
   sizeLabel: string;

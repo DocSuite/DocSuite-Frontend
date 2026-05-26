@@ -1,0 +1,22 @@
+<div
+  *ngIf="notificationService.notification() as notification"
+  class="fixed right-4 top-4 z-50 max-w-md rounded-xl border px-4 py-3 text-sm font-medium"
+  [ngClass]="
+    notification.type === 'error'
+      ? 'border-red-200 bg-red-50 text-red-700'
+      : 'border-emerald-200 bg-emerald-50 text-emerald-700'
+  "
+>
+  <div class="flex items-start gap-3">
+    <i class="pi mt-0.5" [ngClass]="notification.type === 'error' ? 'pi-exclamation-triangle' : 'pi-check-circle'"></i>
+    <p class="leading-5">{{ notification.message }}</p>
+    <button
+      class="ml-2 flex h-6 w-6 items-center justify-center rounded-lg text-current transition-colors hover:bg-white"
+      type="button"
+      (click)="notificationService.clear()"
+      aria-label="Cerrar notificación"
+    >
+      <i class="pi pi-times text-xs"></i>
+    </button>
+  </div>
+</div>

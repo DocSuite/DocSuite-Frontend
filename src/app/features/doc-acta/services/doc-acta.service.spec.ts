@@ -83,6 +83,27 @@ describe('DocActaService', () => {
     });
   });
 
+  it('should update speaker names', () => {
+    service.updateSpeakerNames('acta-1', { names: { SPEAKER_00: 'Docente' } }).subscribe((response) => {
+      expect(response.diarization?.segments?.[0].speaker).toBe('Docente');
+    });
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/meeting-minutes/acta-1/speakers`);
+    expect(request.request.method).toBe('PATCH');
+    expect(request.request.body).toEqual({ names: { SPEAKER_00: 'Docente' } });
+    request.flush({
+      id: 'acta-1',
+      created_at: '2026-05-24T00:00:00Z',
+      updated_at: '2026-05-24T00:00:00Z',
+      filename: 'meeting.mp3',
+      duration_seconds: 60,
+      transcription: 'Texto transcrito',
+      diarization: { segments: [{ speaker: 'Docente', start: 0, end: 10 }] },
+      result: 'Acta',
+      tasks: [],
+    });
+  });
+
   it('should download an acta docx', () => {
     service.downloadActaDocx('acta-1').subscribe((response) => {
       expect(response instanceof Blob).toBeTrue();
