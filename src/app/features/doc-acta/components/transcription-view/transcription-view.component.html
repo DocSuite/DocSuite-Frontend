@@ -30,7 +30,10 @@
   </div>
 
   <ng-container *ngIf="acta; else processingState">
-    <audio *ngIf="audioUrl" #audioPlayer class="mb-4 w-full" controls [src]="audioUrl"></audio>
+    <audio *ngIf="audioUrl" #audioPlayer class="mb-4 w-full" controls [src]="audioUrl" (timeupdate)="onAudioTimeUpdate()"></audio>
+    <p *ngIf="playbackMessage" class="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-700">
+      {{ playbackMessage }}
+    </p>
 
     <div class="mb-4 grid gap-3 sm:grid-cols-3">
       <div class="rounded-lg border border-surface-200 bg-surface-50 px-4 py-3">
@@ -111,7 +114,7 @@
           >
             <span class="flex items-center justify-between gap-3">
               <span class="text-sm font-semibold text-surface-900">{{ segment.speaker }}</span>
-              <i class="pi pi-play text-xs text-brand-600"></i>
+              <i class="pi text-xs text-brand-600" [ngClass]="activeSegmentIndex === index ? 'pi-volume-up' : 'pi-play'"></i>
             </span>
             <span class="mt-1 block text-xs font-medium text-slate-500">
               {{ formatTime(segment.start) }} - {{ formatTime(segment.end) }}

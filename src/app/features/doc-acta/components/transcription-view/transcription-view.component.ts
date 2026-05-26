@@ -42,6 +42,8 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   draftTranscription = '';
   speakerDraft: Record<string, string> = {};
   activeSegmentIndex: number | null = null;
+  activeSegmentEnd: number | null = null;
+  playbackMessage: string | null = null;
 
   get paragraphs(): string[] {
     const text = this.acta?.transcription?.trim();
@@ -165,12 +167,39 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   playSegment(segment: DiarizationSegment, index: number): void {
     const player = this.audioPlayer?.nativeElement;
     if (!player || !this.audioUrl) {
+      this.playbackMessage = 'Para escuchar segmentos, conserva el audio seleccionado en esta pantalla.';
       return;
     }
 
     this.activeSegmentIndex = index;
-    player.currentTime = Math.max(0, segment.start);
-    player.play();
+    this.activeSegmentEnd = Math.max(segment.end, segment.start + 1.5);
+    this.playbackMessage = null;
+
+    try {
+      player.pause();
+      player.volume = 1;
+      player.currentTime = Math.max(0, segment.start);
+      const playback = player.play();
+      if (playback) {
+        playback.catch(() => {
+          this.playbackMessage = 'No se pudo reproducir este segmento. Usa el reproductor del audio para verificar el archivo.';
+        });
+      }
+    } catch {
+      this.playbackMessage = 'No se pudo ubicar este segmento dentro del audio.';
+    }
+  }
+
+  onAudioTimeUpdate(): void {
+    const player = this.audioPlayer?.nativeElement;
+    if (!player || this.activeSegmentEnd === null) {
+      return;
+    }
+
+    if (player.currentTime >= this.activeSegmentEnd) {
+      player.pause();
+      this.activeSegmentEnd = null;
+    }
   }
 
   trackByIndex(index: number): number {
