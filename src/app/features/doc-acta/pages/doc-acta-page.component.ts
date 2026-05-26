@@ -70,6 +70,7 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
   readonly validationFeedback = signal<AudioValidationFeedback | null>(null);
+  readonly isActaPanelOpen = signal(false);
 
   readonly isProcessing = computed(() => {
     const status = this.job()?.status;
@@ -210,6 +211,7 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
     this.docActaService.getActa(actaId).subscribe({
       next: (acta) => {
         this.acta.set(acta);
+        this.isActaPanelOpen.set(true);
         this.isLoadingActa.set(false);
       },
       error: (error) => {
@@ -303,6 +305,7 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
     this.docActaService.regenerateActa(acta.id).subscribe({
       next: (updatedActa) => {
         this.acta.set(updatedActa);
+        this.isActaPanelOpen.set(true);
         this.isRegeneratingActa.set(false);
       },
       error: (error) => {
@@ -310,6 +313,16 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
         this.errorMessage.set(this.getErrorMessage(error, 'No se pudo regenerar el acta.'));
       },
     });
+  }
+
+  openActaPanel(): void {
+    if (this.acta()) {
+      this.isActaPanelOpen.set(true);
+    }
+  }
+
+  closeActaPanel(): void {
+    this.isActaPanelOpen.set(false);
   }
 
   private formatFileSize(size: number): string {

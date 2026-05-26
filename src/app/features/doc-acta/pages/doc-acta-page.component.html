@@ -23,6 +23,15 @@
         </div>
 
         <div class="flex items-center gap-3">
+          <button
+            *ngIf="acta()"
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+            type="button"
+            (click)="openActaPanel()"
+          >
+            <i class="pi pi-file-edit"></i>
+            Ver acta
+          </button>
           <span class="rounded-full border border-surface-200 bg-surface-50 px-3 py-1 text-xs font-semibold uppercase text-slate-600">
             {{ job()?.status || 'sin proceso' }}
           </span>
@@ -58,7 +67,7 @@
       <section class="space-y-5">
         <app-progress-steps [job]="job()" />
 
-        <div class="grid gap-5 xl:grid-cols-2">
+        <div class="grid gap-5">
           <app-transcription-view
             [job]="job()"
             [acta]="acta()"
@@ -69,30 +78,41 @@
             (saveTranscription)="saveTranscription($event)"
             (saveSpeakers)="saveSpeakerNames($event)"
           />
-          <app-acta-view
-            class="hidden xl:block"
-            [job]="job()"
-            [acta]="acta()"
-            [isSaving]="isSavingActa()"
-            [isRegenerating]="isRegeneratingActa()"
-            (saveActa)="saveActa($event)"
-            (regenerateActa)="regenerateActa()"
-          />
-        </div>
-
-        <div class="xl:hidden">
-          <app-acta-view
-            [job]="job()"
-            [acta]="acta()"
-            [isSaving]="isSavingActa()"
-            [isRegenerating]="isRegeneratingActa()"
-            (saveActa)="saveActa($event)"
-            (regenerateActa)="regenerateActa()"
-          />
         </div>
 
         <app-export-panel [acta]="acta()" />
       </section>
     </div>
   </section>
+
+  <aside
+    *ngIf="acta() && isActaPanelOpen()"
+    class="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-surface-200 bg-white lg:w-[720px]"
+  >
+    <header class="flex items-center justify-between gap-3 border-b border-surface-200 px-5 py-4">
+      <div>
+        <p class="text-sm font-medium text-slate-500">DocActa</p>
+        <h2 class="text-lg font-semibold tracking-normal text-surface-900">Panel del acta</h2>
+      </div>
+      <button
+        class="flex h-10 w-10 items-center justify-center rounded-lg border border-surface-200 bg-white text-slate-600 transition-colors hover:border-brand-600 hover:text-brand-600"
+        type="button"
+        (click)="closeActaPanel()"
+        aria-label="Cerrar panel del acta"
+      >
+        <i class="pi pi-times"></i>
+      </button>
+    </header>
+
+    <div class="min-h-0 flex-1 overflow-y-auto bg-surface-50 p-4">
+      <app-acta-view
+        [job]="job()"
+        [acta]="acta()"
+        [isSaving]="isSavingActa()"
+        [isRegenerating]="isRegeneratingActa()"
+        (saveActa)="saveActa($event)"
+        (regenerateActa)="regenerateActa()"
+      />
+    </div>
+  </aside>
 </main>

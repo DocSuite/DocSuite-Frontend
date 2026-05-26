@@ -115,7 +115,7 @@ export class ExportPanelComponent {
         addPage();
       }
 
-      currentPage.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${marginX} ${y} Td <${this.toUtf16Hex(line)}> Tj ET`);
+      currentPage.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${marginX} ${y} Td (${this.toPdfString(line)}) Tj ET`);
       y -= Math.round(size * 1.55);
     };
 
@@ -168,7 +168,7 @@ export class ExportPanelComponent {
       pdf += `${offset.toString().padStart(10, '0')} 00000 n \n`;
     });
     pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-    return new TextEncoder().encode(pdf);
+    return this.toPdfBytes(pdf);
   }
 
   private toPdfBlocks(text: string, maxWidth: number): Array<{ type: 'heading' | 'label' | 'text' | 'space'; lines: string[] }> {
@@ -224,7 +224,7 @@ export class ExportPanelComponent {
 
   private cleanMarkdown(text: string): string {
     return text
-      .replace(/^[-*]\s+/, '• ')
+      .replace(/^[-*]\s+/, '- ')
       .replace(/^\d+\.\s+/, (match) => match)
       .replace(/\*\*(.*?)\*\*/g, '$1')
       .replace(/\*(.*?)\*/g, '$1')
@@ -232,9 +232,25 @@ export class ExportPanelComponent {
       .replace(/^---+$/, '');
   }
 
-  private toUtf16Hex(text: string): string {
-    const codes = [0xfeff, ...Array.from(text).map((char) => char.charCodeAt(0))];
-    return codes.map((code) => code.toString(16).padStart(4, '0')).join('').toUpperCase();
+  private toPdfString(text: string): string {
+    return text
+      .replace(/[“”]/g, '"')
+      .replace(/[‘’]/g, "'")
+      .replace(/[–—]/g, '-')
+      .replace(/☐/g, '[ ]')
+      .replace(/☑/g, '[x]')
+      .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '')
+      .replace(/\\/g, '\\\\')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)');
+  }
+
+  private toPdfBytes(pdf: string): Uint8Array {
+    const bytes = new Uint8Array(pdf.length);
+    for (let index = 0; index < pdf.length; index += 1) {
+      bytes[index] = pdf.charCodeAt(index) & 0xff;
+    }
+    return bytes;
   }
 
   private downloadBlob(blob: Blob, filename: string): void {
