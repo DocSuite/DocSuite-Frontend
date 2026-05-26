@@ -27,6 +27,7 @@
             *ngIf="acta()"
             class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
             type="button"
+            aria-label="Abrir panel del acta generada"
             (click)="openActaPanel()"
           >
             <i class="pi pi-file-edit"></i>
@@ -88,11 +89,14 @@
   <aside
     *ngIf="acta() && isActaPanelOpen()"
     class="fixed inset-y-0 right-0 z-40 flex w-full flex-col border-l border-surface-200 bg-white lg:w-[720px]"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="docacta-panel-title"
   >
     <header class="flex items-center justify-between gap-3 border-b border-surface-200 px-5 py-4">
       <div>
         <p class="text-sm font-medium text-slate-500">DocActa</p>
-        <h2 class="text-lg font-semibold tracking-normal text-surface-900">Panel del acta</h2>
+        <h2 id="docacta-panel-title" class="text-lg font-semibold tracking-normal text-surface-900">Panel del acta</h2>
       </div>
       <button
         class="flex h-10 w-10 items-center justify-center rounded-lg border border-surface-200 bg-white text-slate-600 transition-colors hover:border-brand-600 hover:text-brand-600"

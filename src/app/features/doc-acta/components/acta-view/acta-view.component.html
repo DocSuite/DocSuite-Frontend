@@ -25,6 +25,7 @@
             class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
             type="button"
             [disabled]="isRegenerating"
+            aria-label="Regenerar acta"
             (click)="regenerateActa.emit()"
           >
             <i class="pi" [ngClass]="isRegenerating ? 'pi-spin pi-spinner' : 'pi-refresh'"></i>
@@ -34,6 +35,7 @@
             class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
             type="button"
             [disabled]="isRegenerating"
+            aria-label="Editar acta generada"
             (click)="startEditing()"
           >
             <i class="pi pi-pencil"></i>
@@ -47,10 +49,26 @@
           <label class="block">
             <span class="mb-2 block text-sm font-semibold text-surface-900">Contenido del acta</span>
             <textarea
+              id="docacta-acta-draft"
               class="min-h-80 w-full resize-y rounded-lg border border-surface-200 bg-white px-3 py-3 text-sm leading-6 text-surface-900 outline-none transition-colors focus:border-brand-600"
               [(ngModel)]="draftResult"
               [disabled]="isSaving"
+              aria-describedby="docacta-acta-help docacta-acta-draft-status"
+              aria-label="Editar contenido del acta"
+              (ngModelChange)="onDraftChange()"
             ></textarea>
+            <span id="docacta-acta-help" class="mt-2 block text-xs text-slate-500">
+              Los cambios se conservan como borrador local hasta que pulses Guardar cambios.
+            </span>
+            <span
+              *ngIf="draftStatus"
+              id="docacta-acta-draft-status"
+              class="mt-2 block text-xs font-semibold text-slate-600"
+              role="status"
+              aria-live="polite"
+            >
+              {{ draftStatus }}
+            </span>
           </label>
 
           <section class="rounded-lg border border-surface-200 bg-white p-4">
@@ -63,6 +81,7 @@
                 class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
                 type="button"
                 [disabled]="isSaving"
+                aria-label="Agregar tarea al acta"
                 (click)="addTask()"
               >
                 <i class="pi pi-plus"></i>
@@ -81,6 +100,8 @@
                   placeholder="Descripcion"
                   [(ngModel)]="task.description"
                   [disabled]="isSaving"
+                  [attr.aria-label]="'Descripcion de la tarea ' + (index + 1)"
+                  (ngModelChange)="onDraftChange()"
                 />
                 <input
                   class="rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
@@ -88,6 +109,8 @@
                   placeholder="Responsable"
                   [(ngModel)]="task.owner"
                   [disabled]="isSaving"
+                  [attr.aria-label]="'Responsable de la tarea ' + (index + 1)"
+                  (ngModelChange)="onDraftChange()"
                 />
                 <input
                   class="rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
@@ -95,6 +118,8 @@
                   placeholder="Fecha"
                   [(ngModel)]="task.due_date"
                   [disabled]="isSaving"
+                  [attr.aria-label]="'Fecha de la tarea ' + (index + 1)"
+                  (ngModelChange)="onDraftChange()"
                 />
                 <label class="flex items-center gap-2 text-sm font-medium text-slate-600">
                   <input
@@ -102,6 +127,8 @@
                     type="checkbox"
                     [(ngModel)]="task.done"
                     [disabled]="isSaving"
+                    [attr.aria-label]="'Marcar tarea ' + (index + 1) + ' como hecha'"
+                    (ngModelChange)="onDraftChange()"
                   />
                   Hecho
                 </label>
@@ -127,6 +154,7 @@
               class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
               type="button"
               [disabled]="isSaving"
+              aria-label="Cancelar edicion del acta"
               (click)="cancelEditing()"
             >
               Cancelar
@@ -135,6 +163,7 @@
               class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
               type="button"
               [disabled]="isSaving || !draftResult.trim()"
+              aria-label="Guardar cambios del acta"
               (click)="saveChanges()"
             >
               <i class="pi" [ngClass]="isSaving ? 'pi-spin pi-spinner' : 'pi-save'"></i>

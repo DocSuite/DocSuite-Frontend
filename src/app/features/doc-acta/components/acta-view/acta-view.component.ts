@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, inject, Input, OnChanges, Output, SimpleChanges } from '@angular/core';
+import { Component, EventEmitter, inject, Input, OnChanges, OnDestroy, Output, SimpleChanges } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
@@ -20,8 +20,9 @@ interface ActaBlock {
   templateUrl: './acta-view.component.html',
   styleUrl: './acta-view.component.scss',
 })
-export class ActaViewComponent implements OnChanges {
+export class ActaViewComponent implements OnChanges, OnDestroy {
   private readonly confirmDialogService = inject(ConfirmDialogService);
+  private draftSaveTimeout: ReturnType<typeof setTimeout> | null = null;
 
   @Input() job: ActaJob | null = null;
   @Input() acta: Acta | null = null;
@@ -33,6 +34,8 @@ export class ActaViewComponent implements OnChanges {
   isEditing = false;
   draftResult = '';
   draftTasks: ActaTask[] = [];
+  draftStatus: string | null = null;
+  hasLocalDraft = false;
 
   get isCompleted(): boolean {
     return Boolean(this.acta) || this.job?.status === 'completed';
@@ -52,9 +55,20 @@ export class ActaViewComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['acta']) {
-      this.resetDraft();
-      if (this.isEditing && changes['acta'].previousValue && changes['acta'].currentValue) {
+      const previousActa = changes['acta'].previousValue as Acta | null;
+      const currentActa = changes['acta'].currentValue as Acta | null;
+
+      if (this.isEditing && previousActa?.id && previousActa.id === currentActa?.id) {
+        this.clearLocalDraft();
+        this.draftStatus = null;
         this.isEditing = false;
+      } else {
+        if (previousActa?.id && previousActa.id === currentActa?.id && previousActa.result !== currentActa?.result) {
+          this.clearLocalDraft();
+          this.draftStatus = null;
+        }
+        this.resetDraft();
+        this.loadLocalDraft();
       }
     }
   }
@@ -65,6 +79,7 @@ export class ActaViewComponent implements OnChanges {
     }
 
     this.resetDraft();
+    this.loadLocalDraft();
     this.isEditing = true;
   }
 
@@ -81,6 +96,8 @@ export class ActaViewComponent implements OnChanges {
     }
 
     this.isEditing = false;
+    this.clearLocalDraft();
+    this.draftStatus = null;
     this.resetDraft();
   }
 
@@ -94,6 +111,7 @@ export class ActaViewComponent implements OnChanges {
         done: false,
       },
     ];
+    this.onDraftChange();
   }
 
   async removeTask(index: number): Promise<void> {
@@ -109,6 +127,20 @@ export class ActaViewComponent implements OnChanges {
     }
 
     this.draftTasks = this.draftTasks.filter((_, currentIndex) => currentIndex !== index);
+    this.onDraftChange();
+  }
+
+  onDraftChange(): void {
+    if (!this.isEditing) {
+      return;
+    }
+
+    if (this.draftSaveTimeout) {
+      clearTimeout(this.draftSaveTimeout);
+    }
+
+    this.draftStatus = 'Guardando borrador...';
+    this.draftSaveTimeout = setTimeout(() => this.saveLocalDraft(), 500);
   }
 
   saveChanges(): void {
@@ -127,6 +159,8 @@ export class ActaViewComponent implements OnChanges {
 
   finishSaving(): void {
     this.isEditing = false;
+    this.clearLocalDraft();
+    this.draftStatus = null;
     this.resetDraft();
   }
 
@@ -198,5 +232,80 @@ export class ActaViewComponent implements OnChanges {
   private resetDraft(): void {
     this.draftResult = this.acta?.result ?? '';
     this.draftTasks = (this.acta?.tasks ?? []).map((task) => ({ ...task }));
+  }
+
+  private loadLocalDraft(): void {
+    const key = this.getDraftKey();
+    if (!key) {
+      this.hasLocalDraft = false;
+      return;
+    }
+
+    const rawDraft = localStorage.getItem(key);
+    if (!rawDraft) {
+      this.hasLocalDraft = false;
+      return;
+    }
+
+    try {
+      const parsedDraft = JSON.parse(rawDraft) as { result?: string; tasks?: ActaTask[] };
+      const resultChanged = typeof parsedDraft.result === 'string' && parsedDraft.result !== (this.acta?.result ?? '');
+      const tasksChanged = Array.isArray(parsedDraft.tasks);
+
+      if (resultChanged || tasksChanged) {
+        this.draftResult = typeof parsedDraft.result === 'string' ? parsedDraft.result : this.draftResult;
+        this.draftTasks = tasksChanged ? parsedDraft.tasks!.map((task) => ({ ...task })) : this.draftTasks;
+        this.hasLocalDraft = true;
+        this.draftStatus = 'Borrador local recuperado.';
+        return;
+      }
+    } catch {
+      localStorage.removeItem(key);
+    }
+
+    this.hasLocalDraft = false;
+  }
+
+  private saveLocalDraft(): void {
+    const key = this.getDraftKey();
+    if (!key) {
+      return;
+    }
+
+    const serverTasks = JSON.stringify(this.acta?.tasks ?? []);
+    const draftTasks = JSON.stringify(this.draftTasks);
+    const hasChanges = this.draftResult.trim() !== (this.acta?.result ?? '').trim() || draftTasks !== serverTasks;
+
+    if (!hasChanges) {
+      this.clearLocalDraft();
+      this.draftStatus = null;
+      return;
+    }
+
+    localStorage.setItem(key, JSON.stringify({
+      result: this.draftResult,
+      tasks: this.draftTasks,
+      updatedAt: new Date().toISOString(),
+    }));
+    this.hasLocalDraft = true;
+    this.draftStatus = 'Borrador guardado localmente.';
+  }
+
+  private clearLocalDraft(): void {
+    const key = this.getDraftKey();
+    if (key) {
+      localStorage.removeItem(key);
+    }
+    this.hasLocalDraft = false;
+  }
+
+  private getDraftKey(): string | null {
+    return this.acta?.id ? `docsuite.docacta.actaDraft.${this.acta.id}` : null;
+  }
+
+  ngOnDestroy(): void {
+    if (this.draftSaveTimeout) {
+      clearTimeout(this.draftSaveTimeout);
+    }
   }
 }
