@@ -18,14 +18,16 @@ export class ActaViewComponent implements OnChanges {
   @Input() job: ActaJob | null = null;
   @Input() acta: Acta | null = null;
   @Input() isSaving = false;
+  @Input() isRegenerating = false;
   @Output() saveActa = new EventEmitter<ActaUpdatePayload>();
+  @Output() regenerateActa = new EventEmitter<void>();
 
   isEditing = false;
   draftResult = '';
   draftTasks: ActaTask[] = [];
 
   get isCompleted(): boolean {
-    return this.job?.status === 'completed';
+    return Boolean(this.acta) || this.job?.status === 'completed';
   }
 
   get resultParagraphs(): string[] {

@@ -62,6 +62,29 @@ describe('DocActaService', () => {
     });
   });
 
+  it('should list meeting minutes history', () => {
+    service.listMeetingMinutes().subscribe((response) => {
+      expect(response.length).toBe(1);
+      expect(response[0].id).toBe('acta-1');
+    });
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/history/meeting-minutes`);
+    expect(request.request.method).toBe('GET');
+    request.flush([
+      {
+        id: 'acta-1',
+        created_at: '2026-05-24T00:00:00Z',
+        updated_at: '2026-05-24T00:00:00Z',
+        filename: 'meeting.mp3',
+        duration_seconds: 60,
+        transcription: 'Texto transcrito',
+        diarization: { segments: [] },
+        result: 'Acta',
+        tasks: [],
+      },
+    ]);
+  });
+
   it('should update an acta', () => {
     service.updateActa('acta-1', { result: 'Acta editada', tasks: [] }).subscribe((response) => {
       expect(response.result).toBe('Acta editada');
@@ -100,6 +123,26 @@ describe('DocActaService', () => {
       transcription: 'Texto transcrito',
       diarization: { segments: [{ speaker: 'Docente', start: 0, end: 10 }] },
       result: 'Acta',
+      tasks: [],
+    });
+  });
+
+  it('should regenerate an acta', () => {
+    service.regenerateActa('acta-1').subscribe((response) => {
+      expect(response.result).toBe('Acta regenerada');
+    });
+
+    const request = httpMock.expectOne(`${environment.apiUrl}/meeting-minutes/acta-1/regenerate`);
+    expect(request.request.method).toBe('POST');
+    request.flush({
+      id: 'acta-1',
+      created_at: '2026-05-24T00:00:00Z',
+      updated_at: '2026-05-24T00:00:00Z',
+      filename: 'meeting.mp3',
+      duration_seconds: 60,
+      transcription: 'Texto transcrito',
+      diarization: { segments: [] },
+      result: 'Acta regenerada',
       tasks: [],
     });
   });

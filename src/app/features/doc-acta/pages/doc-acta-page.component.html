@@ -41,6 +41,8 @@
       <aside class="space-y-5">
         <app-audio-upload
           [fileInfo]="fileInfo()"
+          [validationFeedback]="validationFeedback()"
+          [isReadingMetadata]="isReadingAudioMetadata()"
           [disabled]="isProcessing()"
           (fileSelected)="onFileSelected($event)"
           (fileRemoved)="removeFile()"
@@ -72,7 +74,9 @@
             [job]="job()"
             [acta]="acta()"
             [isSaving]="isSavingActa()"
+            [isRegenerating]="isRegeneratingActa()"
             (saveActa)="saveActa($event)"
+            (regenerateActa)="regenerateActa()"
           />
         </div>
 
@@ -81,7 +85,9 @@
             [job]="job()"
             [acta]="acta()"
             [isSaving]="isSavingActa()"
+            [isRegenerating]="isRegeneratingActa()"
             (saveActa)="saveActa($event)"
+            (regenerateActa)="regenerateActa()"
           />
         </div>
 

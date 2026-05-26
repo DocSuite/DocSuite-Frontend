@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 
-import { AudioFileInfo } from '../../models/doc-acta.models';
+import { AudioFileInfo, AudioValidationFeedback } from '../../models/doc-acta.models';
 
 const ALLOWED_EXTENSIONS = [
   'aac',
@@ -29,6 +29,8 @@ const ALLOWED_EXTENSIONS = [
 })
 export class AudioUploadComponent {
   @Input() fileInfo: AudioFileInfo | null = null;
+  @Input() validationFeedback: AudioValidationFeedback | null = null;
+  @Input() isReadingMetadata = false;
   @Input() disabled = false;
   @Output() fileSelected = new EventEmitter<File>();
   @Output() fileRemoved = new EventEmitter<void>();

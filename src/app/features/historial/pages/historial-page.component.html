@@ -1,0 +1,64 @@
+<main class="min-h-screen bg-surface-50 p-4 text-surface-900 sm:p-6 lg:p-8">
+  <section class="w-full">
+    <header class="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div>
+        <p class="text-sm font-medium text-slate-500">DocSuite / Historial</p>
+        <h1 class="mt-2 text-2xl font-semibold tracking-normal text-surface-900">Historial</h1>
+        <p class="mt-2 text-sm text-slate-600">Actas generadas previamente en DocActa.</p>
+      </div>
+
+      <button
+        class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+        type="button"
+        (click)="loadHistory()"
+      >
+        <i class="pi pi-refresh"></i>
+        Actualizar
+      </button>
+    </header>
+
+    <p *ngIf="errorMessage()" class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+      {{ errorMessage() }}
+    </p>
+
+    <section class="overflow-hidden rounded-xl border border-surface-200 bg-white">
+      <div class="grid grid-cols-[1.4fr_0.8fr_0.8fr_0.7fr_auto] gap-4 border-b border-surface-200 bg-surface-50 px-5 py-3 text-xs font-semibold uppercase text-slate-500">
+        <span>Archivo</span>
+        <span>Duracion</span>
+        <span>Tareas</span>
+        <span>Fecha</span>
+        <span></span>
+      </div>
+
+      <div *ngIf="isLoading()" class="px-5 py-6 text-sm text-slate-600">
+        <i class="pi pi-spin pi-spinner mr-2 text-brand-600"></i>
+        Cargando historial.
+      </div>
+
+      <article
+        *ngFor="let acta of actas()"
+        class="grid grid-cols-[1.4fr_0.8fr_0.8fr_0.7fr_auto] gap-4 border-b border-surface-200 px-5 py-4 text-sm last:border-b-0"
+      >
+        <div class="min-w-0">
+          <p class="truncate font-semibold text-surface-900">{{ acta.filename }}</p>
+          <p class="mt-1 truncate text-xs text-slate-500">{{ acta.id }}</p>
+        </div>
+        <span class="text-slate-600">{{ formatDuration(acta.duration_seconds) }}</span>
+        <span class="text-slate-600">{{ acta.tasks.length }}</span>
+        <span class="text-slate-500">{{ formatDate(acta.created_at) }}</span>
+        <a
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+          routerLink="/doc-acta"
+          [queryParams]="{ actaId: acta.id }"
+        >
+          <i class="pi pi-eye"></i>
+          Ver
+        </a>
+      </article>
+
+      <p *ngIf="!isLoading() && !actas().length" class="px-5 py-6 text-sm text-slate-500">
+        Todavia no hay actas registradas.
+      </p>
+    </section>
+  </section>
+</main>

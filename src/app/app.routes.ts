@@ -43,6 +43,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'history',
+        loadComponent: () =>
+          import('./features/historial/pages/historial-page.component').then(
+            (module) => module.HistorialPageComponent,
+          ),
+      },
+      {
         path: '',
         pathMatch: 'full',
         redirectTo: 'dashboard',

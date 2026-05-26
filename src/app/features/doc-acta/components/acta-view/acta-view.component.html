@@ -20,15 +20,26 @@
           </div>
         </div>
 
-        <button
-          *ngIf="acta && !isEditing"
-          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
-          type="button"
-          (click)="startEditing()"
-        >
-          <i class="pi pi-pencil"></i>
-          Editar
-        </button>
+        <div *ngIf="acta && !isEditing" class="flex flex-col gap-2 sm:flex-row">
+          <button
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
+            type="button"
+            [disabled]="isRegenerating"
+            (click)="regenerateActa.emit()"
+          >
+            <i class="pi" [ngClass]="isRegenerating ? 'pi-spin pi-spinner' : 'pi-refresh'"></i>
+            Regenerar
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
+            type="button"
+            [disabled]="isRegenerating"
+            (click)="startEditing()"
+          >
+            <i class="pi pi-pencil"></i>
+            Editar
+          </button>
+        </div>
       </div>
 
       <ng-container *ngIf="isEditing; else readMode">
