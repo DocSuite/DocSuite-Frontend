@@ -1,13 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 
-interface AuditRecord {
-  event: string;
-  user: string;
-  module: string;
-  date: string;
-  status: string;
-}
+import { AuditRecord } from './audit.models';
+import { AuditService } from './audit.service';
 
 @Component({
   selector: 'app-audits-page',
@@ -16,35 +11,41 @@ interface AuditRecord {
   templateUrl: './audits-page.component.html',
   styleUrl: './audits-page.component.scss',
 })
-export class AuditsPageComponent {
-  readonly records: AuditRecord[] = [
-    {
-      event: 'Inicio de sesion',
-      user: 'admin@docsuite.edu.pe',
-      module: 'Auth',
-      date: 'Hace 8 min',
-      status: 'Normal',
-    },
-    {
-      event: 'Acta editada',
-      user: 'admin@docsuite.edu.pe',
-      module: 'DocActa',
-      date: 'Hace 22 min',
-      status: 'Revision',
-    },
-    {
-      event: 'Documento analizado',
-      user: 'docente@docsuite.edu.pe',
-      module: 'DocAnalyzer',
-      date: 'Hoy 09:15',
-      status: 'Normal',
-    },
-    {
-      event: 'Exportacion DOCX',
-      user: 'admin@docsuite.edu.pe',
-      module: 'DocActa',
-      date: 'Ayer 16:42',
-      status: 'Normal',
-    },
-  ];
+export class AuditsPageComponent implements OnInit {
+  private readonly auditService = inject(AuditService);
+
+  readonly records = signal<AuditRecord[]>([]);
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
+
+  ngOnInit(): void {
+    this.loadAudits();
+  }
+
+  loadAudits(): void {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+
+    this.auditService.listAudits().subscribe({
+      next: (records) => {
+        this.records.set(records);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.errorMessage.set('No se pudieron cargar las auditorias.');
+        this.isLoading.set(false);
+      },
+    });
+  }
+
+  formatDate(value: string): string {
+    return new Intl.DateTimeFormat('es-PE', {
+      dateStyle: 'medium',
+      timeStyle: 'short',
+    }).format(new Date(value));
+  }
+
+  statusLabel(status: string): string {
+    return status === 'success' ? 'Normal' : status;
+  }
 }
