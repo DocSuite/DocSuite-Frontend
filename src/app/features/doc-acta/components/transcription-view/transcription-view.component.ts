@@ -26,6 +26,7 @@ import { Acta, ActaJob, DiarizationSegment } from '../../models/doc-acta.models'
 export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   @ViewChild('audioPlayer') audioPlayer?: ElementRef<HTMLAudioElement>;
   private readonly confirmDialogService = inject(ConfirmDialogService);
+  private draftSaveTimeout: ReturnType<typeof setTimeout> | null = null;
 
   @Input() job: ActaJob | null = null;
   @Input() acta: Acta | null = null;
@@ -40,6 +41,8 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   isEditing = false;
   isRenamingSpeakers = false;
   draftTranscription = '';
+  draftStatus: string | null = null;
+  hasLocalDraft = false;
   speakerDraft: Record<string, string> = {};
   activeSegmentIndex: number | null = null;
   activeSegmentEnd: number | null = null;
@@ -87,9 +90,20 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['acta']) {
-      this.draftTranscription = this.acta?.transcription ?? '';
-      if (this.isEditing && changes['acta'].previousValue && changes['acta'].currentValue) {
+      const previousActa = changes['acta'].previousValue as Acta | null;
+      const currentActa = changes['acta'].currentValue as Acta | null;
+
+      if (this.isEditing && previousActa?.id && previousActa.id === currentActa?.id) {
+        this.clearLocalDraft();
+        this.draftStatus = null;
         this.isEditing = false;
+      } else {
+        if (previousActa?.id && previousActa.id === currentActa?.id && previousActa.transcription !== currentActa?.transcription) {
+          this.clearLocalDraft();
+          this.draftStatus = null;
+        }
+        this.draftTranscription = this.acta?.transcription ?? '';
+        this.loadLocalDraft();
       }
     }
 
@@ -100,6 +114,7 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
 
   startEditing(): void {
     this.draftTranscription = this.acta?.transcription ?? '';
+    this.loadLocalDraft();
     this.isEditing = true;
   }
 
@@ -118,7 +133,22 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
     }
 
     this.draftTranscription = this.acta?.transcription ?? '';
+    this.clearLocalDraft();
+    this.draftStatus = null;
     this.isEditing = false;
+  }
+
+  onDraftChange(): void {
+    if (!this.isEditing) {
+      return;
+    }
+
+    if (this.draftSaveTimeout) {
+      clearTimeout(this.draftSaveTimeout);
+    }
+
+    this.draftStatus = 'Guardando borrador...';
+    this.draftSaveTimeout = setTimeout(() => this.saveLocalDraft(), 500);
   }
 
   saveChanges(): void {
@@ -127,6 +157,8 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
 
   finishSaving(): void {
     this.isEditing = false;
+    this.clearLocalDraft();
+    this.draftStatus = null;
     this.draftTranscription = this.acta?.transcription ?? '';
   }
 
@@ -214,7 +246,70 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
     this.audioUrl = this.audioFile ? URL.createObjectURL(this.audioFile) : null;
   }
 
+  private loadLocalDraft(): void {
+    const key = this.getDraftKey();
+    if (!key) {
+      this.hasLocalDraft = false;
+      return;
+    }
+
+    const rawDraft = localStorage.getItem(key);
+    if (!rawDraft) {
+      this.hasLocalDraft = false;
+      return;
+    }
+
+    try {
+      const parsedDraft = JSON.parse(rawDraft) as { transcription?: string };
+      if (typeof parsedDraft.transcription === 'string' && parsedDraft.transcription !== (this.acta?.transcription ?? '')) {
+        this.draftTranscription = parsedDraft.transcription;
+        this.hasLocalDraft = true;
+        this.draftStatus = 'Borrador local recuperado.';
+        return;
+      }
+    } catch {
+      localStorage.removeItem(key);
+    }
+
+    this.hasLocalDraft = false;
+  }
+
+  private saveLocalDraft(): void {
+    const key = this.getDraftKey();
+    if (!key) {
+      return;
+    }
+
+    if (this.draftTranscription.trim() === (this.acta?.transcription ?? '').trim()) {
+      this.clearLocalDraft();
+      this.draftStatus = null;
+      return;
+    }
+
+    localStorage.setItem(key, JSON.stringify({
+      transcription: this.draftTranscription,
+      updatedAt: new Date().toISOString(),
+    }));
+    this.hasLocalDraft = true;
+    this.draftStatus = 'Borrador guardado localmente.';
+  }
+
+  private clearLocalDraft(): void {
+    const key = this.getDraftKey();
+    if (key) {
+      localStorage.removeItem(key);
+    }
+    this.hasLocalDraft = false;
+  }
+
+  private getDraftKey(): string | null {
+    return this.acta?.id ? `docsuite.docacta.transcriptionDraft.${this.acta.id}` : null;
+  }
+
   ngOnDestroy(): void {
+    if (this.draftSaveTimeout) {
+      clearTimeout(this.draftSaveTimeout);
+    }
     if (this.audioUrl) {
       URL.revokeObjectURL(this.audioUrl);
     }

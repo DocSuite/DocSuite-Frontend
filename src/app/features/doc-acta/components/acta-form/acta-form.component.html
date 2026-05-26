@@ -22,6 +22,7 @@
     class="mt-5 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
     type="button"
     [disabled]="disabled || !isReady"
+    aria-label="Generar acta desde el audio seleccionado"
     (click)="startProcessing.emit()"
   >
     <i class="pi pi-play"></i>
