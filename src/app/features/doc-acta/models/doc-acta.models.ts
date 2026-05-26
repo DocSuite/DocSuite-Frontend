@@ -52,4 +52,10 @@ export interface AudioFileInfo {
   name: string;
   sizeLabel: string;
   extension: string;
+  durationLabel?: string;
+}
+
+export interface AudioValidationFeedback {
+  level: 'warning' | 'error';
+  messages: string[];
 }

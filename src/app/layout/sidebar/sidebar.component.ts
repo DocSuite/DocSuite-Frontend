@@ -32,7 +32,7 @@ export class SidebarComponent implements OnInit {
     { label: 'Dashboard', icon: 'pi-home', route: '/dashboard' },
     { label: 'DocAnalyzer', icon: 'pi-file', route: '/dashboard', badge: 'Pronto', disabled: true },
     { label: 'DocActa', icon: 'pi-microphone', route: '/doc-acta' },
-    { label: 'Historial', icon: 'pi-history', route: '/dashboard', badge: 'Pronto', disabled: true },
+    { label: 'Historial', icon: 'pi-history', route: '/history' },
     { label: 'Auditorias', icon: 'pi-shield', route: '/audits' },
     { label: 'Mi perfil', icon: 'pi-user', route: '/profile' },
   ];

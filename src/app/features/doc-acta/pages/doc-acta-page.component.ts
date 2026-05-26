@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, inject, OnDestroy, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, switchMap, takeWhile, timer } from 'rxjs';
 
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
@@ -11,8 +11,29 @@ import { AudioUploadComponent } from '../components/audio-upload/audio-upload.co
 import { ExportPanelComponent } from '../components/export-panel/export-panel.component';
 import { ProgressStepsComponent } from '../components/progress-steps/progress-steps.component';
 import { TranscriptionViewComponent } from '../components/transcription-view/transcription-view.component';
-import { Acta, ActaJob, ActaUpdatePayload, AudioFileInfo } from '../models/doc-acta.models';
+import { Acta, ActaJob, ActaUpdatePayload, AudioFileInfo, AudioValidationFeedback } from '../models/doc-acta.models';
 import { DocActaService } from '../services/doc-acta.service';
+
+const ALLOWED_AUDIO_EXTENSIONS = new Set([
+  'aac',
+  'aiff',
+  'amr',
+  'flac',
+  'm4a',
+  'mp3',
+  'mp4',
+  'mpeg',
+  'oga',
+  'ogg',
+  'opus',
+  'wav',
+  'webm',
+  'wma',
+]);
+const MAX_FILE_SIZE_BYTES = 200 * 1024 * 1024;
+const WARNING_FILE_SIZE_BYTES = 75 * 1024 * 1024;
+const MAX_DURATION_SECONDS = 2 * 60 * 60;
+const WARNING_DURATION_SECONDS = 60 * 60;
 
 @Component({
   selector: 'app-doc-acta-page',
@@ -30,9 +51,10 @@ import { DocActaService } from '../services/doc-acta.service';
   templateUrl: './doc-acta-page.component.html',
   styleUrl: './doc-acta-page.component.scss',
 })
-export class DocActaPageComponent implements OnDestroy {
+export class DocActaPageComponent implements OnInit, OnDestroy {
   private readonly docActaService = inject(DocActaService);
   private readonly confirmDialogService = inject(ConfirmDialogService);
+  private readonly route = inject(ActivatedRoute);
   private pollingSubscription?: Subscription;
 
   readonly selectedFile = signal<File | null>(null);
@@ -43,18 +65,28 @@ export class DocActaPageComponent implements OnDestroy {
   readonly isSavingActa = signal(false);
   readonly isSavingTranscription = signal(false);
   readonly isSavingSpeakers = signal(false);
+  readonly isRegeneratingActa = signal(false);
+  readonly isReadingAudioMetadata = signal(false);
   readonly isSubmitting = signal(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly validationFeedback = signal<AudioValidationFeedback | null>(null);
 
   readonly isProcessing = computed(() => {
     const status = this.job()?.status;
     return this.isSubmitting() || status === 'queued' || status === 'running';
   });
 
-  readonly canStart = computed(() => Boolean(this.selectedFile()) && !this.isProcessing());
+  readonly canStart = computed(() => Boolean(this.selectedFile()) && !this.isProcessing() && !this.isReadingAudioMetadata());
 
-  onFileSelected(file: File): void {
-    this.selectedFile.set(file);
+  ngOnInit(): void {
+    const actaId = this.route.snapshot.queryParamMap.get('actaId');
+    if (actaId) {
+      this.loadActa(actaId);
+    }
+  }
+
+  async onFileSelected(file: File): Promise<void> {
+    this.selectedFile.set(null);
     this.fileInfo.set({
       name: file.name,
       sizeLabel: this.formatFileSize(file.size),
@@ -63,6 +95,35 @@ export class DocActaPageComponent implements OnDestroy {
     this.job.set(null);
     this.acta.set(null);
     this.errorMessage.set(null);
+    this.validationFeedback.set(null);
+    this.pollingSubscription?.unsubscribe();
+
+    const fileFeedback = this.validateFile(file);
+    if (fileFeedback?.level === 'error') {
+      this.validationFeedback.set(fileFeedback);
+      return;
+    }
+
+    this.isReadingAudioMetadata.set(true);
+
+    try {
+      const duration = await this.readAudioDuration(file);
+      this.fileInfo.update((info) => info ? { ...info, durationLabel: this.formatTime(duration) } : info);
+      const durationFeedback = this.validateDuration(duration);
+      this.validationFeedback.set(this.mergeFeedback(fileFeedback, durationFeedback));
+
+      if (durationFeedback?.level !== 'error') {
+        this.selectedFile.set(file);
+      }
+    } catch {
+      this.validationFeedback.set(this.mergeFeedback(fileFeedback, {
+        level: 'warning',
+        messages: ['No se pudo leer la duracion antes de subirlo. El backend intentara procesarlo de todos modos.'],
+      }));
+      this.selectedFile.set(file);
+    } finally {
+      this.isReadingAudioMetadata.set(false);
+    }
   }
 
   async removeFile(): Promise<void> {
@@ -86,11 +147,12 @@ export class DocActaPageComponent implements OnDestroy {
     this.job.set(null);
     this.acta.set(null);
     this.errorMessage.set(null);
+    this.validationFeedback.set(null);
   }
 
   startJob(): void {
     const file = this.selectedFile();
-    if (!file) {
+    if (!file || this.isReadingAudioMetadata()) {
       return;
     }
 
@@ -113,26 +175,34 @@ export class DocActaPageComponent implements OnDestroy {
   }
 
   private pollJob(jobId: string): void {
-    // Polling consulta el backend periodicamente hasta que el trabajo termina.
+    this.pollingSubscription = this.docActaService.streamJob(jobId).subscribe({
+      next: (job) => this.handleJobUpdate(job),
+      error: () => this.pollJobWithTimer(jobId),
+    });
+  }
+
+  private pollJobWithTimer(jobId: string): void {
     this.pollingSubscription = timer(0, 2500)
       .pipe(
         switchMap(() => this.docActaService.getJob(jobId)),
         takeWhile((job) => job.status === 'queued' || job.status === 'running', true),
       )
       .subscribe({
-        next: (job) => {
-          this.job.set(job);
-          if (job.status === 'completed' && job.acta_id) {
-            this.loadActa(job.acta_id);
-          }
-          if (job.status === 'failed') {
-            this.errorMessage.set(job.error || 'No se pudo completar el procesamiento.');
-          }
-        },
+        next: (job) => this.handleJobUpdate(job),
         error: (error) => {
           this.errorMessage.set(this.getErrorMessage(error, 'No se pudo consultar el progreso del procesamiento.'));
         },
       });
+  }
+
+  private handleJobUpdate(job: ActaJob): void {
+    this.job.set(job);
+    if (job.status === 'completed' && job.acta_id) {
+      this.loadActa(job.acta_id);
+    }
+    if (job.status === 'failed') {
+      this.errorMessage.set(job.error || 'No se pudo completar el procesamiento.');
+    }
   }
 
   private loadActa(actaId: string): void {
@@ -211,6 +281,37 @@ export class DocActaPageComponent implements OnDestroy {
     });
   }
 
+  async regenerateActa(): Promise<void> {
+    const acta = this.acta();
+    if (!acta) {
+      return;
+    }
+
+    const confirmed = await this.confirmDialogService.confirm({
+      title: 'Regenerar acta',
+      message: 'Se generara una nueva acta usando la transcripcion actual. La version anterior sera reemplazada.',
+      confirmLabel: 'Regenerar',
+      tone: 'danger',
+    });
+
+    if (!confirmed) {
+      return;
+    }
+
+    this.isRegeneratingActa.set(true);
+    this.errorMessage.set(null);
+    this.docActaService.regenerateActa(acta.id).subscribe({
+      next: (updatedActa) => {
+        this.acta.set(updatedActa);
+        this.isRegeneratingActa.set(false);
+      },
+      error: (error) => {
+        this.isRegeneratingActa.set(false);
+        this.errorMessage.set(this.getErrorMessage(error, 'No se pudo regenerar el acta.'));
+      },
+    });
+  }
+
   private formatFileSize(size: number): string {
     if (size < 1024 * 1024) {
       return `${(size / 1024).toFixed(1)} KB`;
@@ -219,9 +320,101 @@ export class DocActaPageComponent implements OnDestroy {
     return `${(size / 1024 / 1024).toFixed(1)} MB`;
   }
 
+  private formatTime(seconds: number): string {
+    const totalSeconds = Math.max(0, Math.round(seconds));
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const remainingSeconds = totalSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
+
   private getExtension(filename: string): string {
     const extension = filename.split('.').pop();
     return extension ? extension.toUpperCase() : 'AUDIO';
+  }
+
+  private validateFile(file: File): AudioValidationFeedback | null {
+    const extension = this.getExtension(file.name).toLowerCase();
+    const messages: string[] = [];
+
+    if (!ALLOWED_AUDIO_EXTENSIONS.has(extension)) {
+      return {
+        level: 'error',
+        messages: [`Formato no permitido: .${extension || 'archivo'}. Usa MP3, WAV, M4A, MP4, WEBM, OGG o FLAC.`],
+      };
+    }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      return {
+        level: 'error',
+        messages: [`El archivo pesa ${this.formatFileSize(file.size)}. El maximo permitido es ${this.formatFileSize(MAX_FILE_SIZE_BYTES)}.`],
+      };
+    }
+
+    if (file.size > WARNING_FILE_SIZE_BYTES) {
+      messages.push(`El archivo pesa ${this.formatFileSize(file.size)}. Puede tardar mas en transcribirse.`);
+    }
+
+    return messages.length ? { level: 'warning', messages } : null;
+  }
+
+  private validateDuration(duration: number): AudioValidationFeedback | null {
+    if (duration > MAX_DURATION_SECONDS) {
+      return {
+        level: 'error',
+        messages: [`El audio dura ${this.formatTime(duration)}. El maximo recomendado para esta etapa es ${this.formatTime(MAX_DURATION_SECONDS)}.`],
+      };
+    }
+
+    if (duration > WARNING_DURATION_SECONDS) {
+      return {
+        level: 'warning',
+        messages: [`El audio dura ${this.formatTime(duration)}. Puede tardar bastante en procesarse.`],
+      };
+    }
+
+    return null;
+  }
+
+  private mergeFeedback(
+    first: AudioValidationFeedback | null,
+    second: AudioValidationFeedback | null,
+  ): AudioValidationFeedback | null {
+    if (!first) {
+      return second;
+    }
+
+    if (!second) {
+      return first;
+    }
+
+    return {
+      level: first.level === 'error' || second.level === 'error' ? 'error' : 'warning',
+      messages: [...first.messages, ...second.messages],
+    };
+  }
+
+  private readAudioDuration(file: File): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const audio = document.createElement('audio');
+      const url = URL.createObjectURL(file);
+
+      audio.preload = 'metadata';
+      audio.onloadedmetadata = () => {
+        URL.revokeObjectURL(url);
+        Number.isFinite(audio.duration) ? resolve(audio.duration) : reject();
+      };
+      audio.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject();
+      };
+      audio.src = url;
+    });
   }
 
   private getErrorMessage(error: unknown, fallback: string): string {
