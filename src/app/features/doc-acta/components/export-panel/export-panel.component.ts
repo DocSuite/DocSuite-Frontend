@@ -40,7 +40,7 @@ export class ExportPanelComponent {
       return;
     }
 
-    this.downloadPdf('Acta', this.acta.result, `${this.baseName()}_acta.pdf`);
+    this.downloadPdf('Acta de Reunion', this.acta.result, `${this.baseName()}_acta.pdf`);
   }
 
   downloadActaDocx(): void {
@@ -94,23 +94,64 @@ export class ExportPanelComponent {
     this.downloadBlob(blob, filename);
   }
 
-  private createPdf(title: string, text: string): string {
-    const lines = this.wrapText([title, '', ...text.split(/\r?\n/)].join('\n'), 92);
-    const content = [
-      'BT',
-      '/F1 11 Tf',
-      '50 790 Td',
-      '14 TL',
-      ...lines.slice(0, 52).map((line) => `<${this.toUtf16Hex(line)}> Tj T*`),
-      'ET',
-    ].join('\n');
+  private createPdf(title: string, text: string): Uint8Array {
+    const pageWidth = 595;
+    const pageHeight = 842;
+    const marginX = 56;
+    const maxWidth = pageWidth - marginX * 2;
+    const bottomMargin = 64;
+    const pages: string[][] = [];
+    let currentPage: string[] = [];
+    let y = 782;
+
+    const addPage = (): void => {
+      pages.push(currentPage);
+      currentPage = [];
+      y = 782;
+    };
+
+    const addLine = (line: string, size = 11, bold = false): void => {
+      if (y < bottomMargin) {
+        addPage();
+      }
+
+      currentPage.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${marginX} ${y} Td (${this.toPdfString(line)}) Tj ET`);
+      y -= Math.round(size * 1.55);
+    };
+
+    addLine(title.toUpperCase(), 16, true);
+    y -= 12;
+
+    for (const block of this.toPdfBlocks(text, maxWidth)) {
+      if (block.type === 'space') {
+        y -= 8;
+        continue;
+      }
+
+      const size = block.type === 'heading' ? 14 : 10;
+      const bold = block.type === 'heading' || block.type === 'label';
+      for (const line of block.lines) {
+        addLine(line, size, bold);
+      }
+      y -= block.type === 'heading' ? 10 : 4;
+    }
+
+    pages.push(currentPage);
 
     const objects = [
       '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
-      '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
-      '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 612 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >> endobj',
-      '4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
-      `5 0 obj << /Length ${content.length} >> stream\n${content}\nendstream endobj`,
+      `2 0 obj << /Type /Pages /Kids [${pages.map((_, index) => `${3 + index * 2} 0 R`).join(' ')}] /Count ${pages.length} >> endobj`,
+      ...pages.flatMap((pageLines, index) => {
+        const pageObject = 3 + index * 2;
+        const contentObject = pageObject + 1;
+        const content = pageLines.join('\n');
+        return [
+          `${pageObject} 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageWidth} ${pageHeight}] /Resources << /Font << /F1 ${3 + pages.length * 2} 0 R /F2 ${4 + pages.length * 2} 0 R >> >> /Contents ${contentObject} 0 R >> endobj`,
+          `${contentObject} 0 obj << /Length ${content.length} >> stream\n${content}\nendstream endobj`,
+        ];
+      }),
+      `${3 + pages.length * 2} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj`,
+      `${4 + pages.length * 2} 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >> endobj`,
     ];
 
     let pdf = '%PDF-1.4\n';
@@ -127,31 +168,89 @@ export class ExportPanelComponent {
       pdf += `${offset.toString().padStart(10, '0')} 00000 n \n`;
     });
     pdf += `trailer << /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
-    return pdf;
+    return this.toPdfBytes(pdf);
   }
 
-  private wrapText(text: string, maxLength: number): string[] {
-    const lines: string[] = [];
-    for (const rawLine of text.split(/\r?\n/)) {
-      const words = rawLine.split(/\s+/).filter(Boolean);
-      let line = '';
-      for (const word of words) {
-        const nextLine = line ? `${line} ${word}` : word;
-        if (nextLine.length > maxLength) {
-          lines.push(line);
-          line = word;
-        } else {
-          line = nextLine;
-        }
+  private toPdfBlocks(text: string, maxWidth: number): Array<{ type: 'heading' | 'label' | 'text' | 'space'; lines: string[] }> {
+    return text.split(/\r?\n/).map((rawLine) => {
+      const line = rawLine.trim();
+      if (!line) {
+        return { type: 'space', lines: [] };
       }
+
+      if (line.startsWith('#')) {
+        return {
+          type: 'heading',
+          lines: this.wrapText(line.replace(/^#+\s*/, '').toUpperCase(), maxWidth, 14),
+        };
+      }
+
+      if (/^\*\*.+\*\*:/.test(line) || /^[A-ZÁÉÍÓÚÑ][^:]{2,40}:/.test(line)) {
+        return {
+          type: 'label',
+          lines: this.wrapText(this.cleanMarkdown(line), maxWidth, 10),
+        };
+      }
+
+      return {
+        type: 'text',
+        lines: this.wrapText(this.cleanMarkdown(line), maxWidth, 10),
+      };
+    });
+  }
+
+  private wrapText(text: string, maxWidth: number, fontSize: number): string[] {
+    const maxLength = Math.max(28, Math.floor(maxWidth / (fontSize * 0.55)));
+    const lines: string[] = [];
+    const words = text.split(/\s+/).filter(Boolean);
+    let line = '';
+
+    for (const word of words) {
+      const nextLine = line ? `${line} ${word}` : word;
+      if (nextLine.length > maxLength && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = nextLine;
+      }
+    }
+
+    if (line) {
       lines.push(line);
     }
+
     return lines;
   }
 
-  private toUtf16Hex(text: string): string {
-    const codes = [0xfeff, ...Array.from(text).map((char) => char.charCodeAt(0))];
-    return codes.map((code) => code.toString(16).padStart(4, '0')).join('').toUpperCase();
+  private cleanMarkdown(text: string): string {
+    return text
+      .replace(/^[-*]\s+/, '- ')
+      .replace(/^\d+\.\s+/, (match) => match)
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/`([^`]+)`/g, '$1')
+      .replace(/^---+$/, '');
+  }
+
+  private toPdfString(text: string): string {
+    return text
+      .replace(/[“”]/g, '"')
+      .replace(/[‘’]/g, "'")
+      .replace(/[–—]/g, '-')
+      .replace(/☐/g, '[ ]')
+      .replace(/☑/g, '[x]')
+      .replace(/[^\x09\x0A\x0D\x20-\x7E\xA0-\xFF]/g, '')
+      .replace(/\\/g, '\\\\')
+      .replace(/\(/g, '\\(')
+      .replace(/\)/g, '\\)');
+  }
+
+  private toPdfBytes(pdf: string): Uint8Array {
+    const bytes = new Uint8Array(pdf.length);
+    for (let index = 0; index < pdf.length; index += 1) {
+      bytes[index] = pdf.charCodeAt(index) & 0xff;
+    }
+    return bytes;
   }
 
   private downloadBlob(blob: Blob, filename: string): void {
@@ -159,7 +258,10 @@ export class ExportPanelComponent {
     const link = document.createElement('a');
     link.href = url;
     link.download = filename;
+    link.style.display = 'none';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }
 
