@@ -48,19 +48,23 @@
       {{ errorMessage() }}
     </p>
 
+    <p *ngIf="!canCreateDocActa()" class="mb-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-700">
+      Tu rol permite revisar DocActa, pero no crear nuevas actas.
+    </p>
+
     <div class="grid gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
       <aside class="space-y-5">
         <app-audio-upload
           [fileInfo]="fileInfo()"
           [validationFeedback]="validationFeedback()"
           [isReadingMetadata]="isReadingAudioMetadata()"
-          [disabled]="isProcessing()"
+          [disabled]="isProcessing() || !canCreateDocActa()"
           (fileSelected)="onFileSelected($event)"
           (fileRemoved)="removeFile()"
         />
 
         <app-acta-form
-          [disabled]="isProcessing()"
+          [disabled]="isProcessing() || !canCreateDocActa()"
           [isReady]="canStart()"
           (startProcessing)="startJob()"
         />
@@ -77,6 +81,7 @@
             [isLoading]="isLoadingActa()"
             [isSaving]="isSavingTranscription()"
             [isSavingSpeakers]="isSavingSpeakers()"
+            [canUpdate]="canUpdateDocActa()"
             (saveTranscription)="saveTranscription($event)"
             (saveSpeakers)="saveSpeakerNames($event)"
           />
@@ -116,6 +121,7 @@
         [acta]="acta()"
         [isSaving]="isSavingActa()"
         [isRegenerating]="isRegeneratingActa()"
+        [canUpdate]="canUpdateDocActa()"
         (saveActa)="saveActa($event)"
         (regenerateActa)="regenerateActa()"
       />

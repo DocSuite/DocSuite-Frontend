@@ -54,6 +54,10 @@
             </span>
           </label>
 
+          <a class="inline-flex text-sm font-semibold text-brand-600" routerLink="/forgot-password">
+            Olvide mi contrasena
+          </a>
+
           <div *ngIf="errorMessage()" class="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
             {{ errorMessage() }}
           </div>

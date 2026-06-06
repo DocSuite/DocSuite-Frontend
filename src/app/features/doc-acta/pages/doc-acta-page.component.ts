@@ -4,6 +4,7 @@ import { Component, HostListener, computed, inject, OnDestroy, OnInit, signal } 
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { Subscription, switchMap, takeWhile, timer } from 'rxjs';
 
+import { AuthService } from '../../../core/auth/auth.service';
 import { ConfirmDialogService } from '../../../core/services/confirm-dialog.service';
 import { ActaFormComponent } from '../components/acta-form/acta-form.component';
 import { ActaViewComponent } from '../components/acta-view/acta-view.component';
@@ -54,6 +55,7 @@ const WARNING_DURATION_SECONDS = 60 * 60;
 export class DocActaPageComponent implements OnInit, OnDestroy {
   private readonly docActaService = inject(DocActaService);
   private readonly confirmDialogService = inject(ConfirmDialogService);
+  private readonly authService = inject(AuthService);
   private readonly route = inject(ActivatedRoute);
   private pollingSubscription?: Subscription;
 
@@ -71,13 +73,15 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
   readonly errorMessage = signal<string | null>(null);
   readonly validationFeedback = signal<AudioValidationFeedback | null>(null);
   readonly isActaPanelOpen = signal(false);
+  readonly canCreateDocActa = computed(() => this.authService.canCreatePath('/doc-acta'));
+  readonly canUpdateDocActa = computed(() => this.authService.canUpdatePath('/doc-acta'));
 
   readonly isProcessing = computed(() => {
     const status = this.job()?.status;
     return this.isSubmitting() || status === 'queued' || status === 'running';
   });
 
-  readonly canStart = computed(() => Boolean(this.selectedFile()) && !this.isProcessing() && !this.isReadingAudioMetadata());
+  readonly canStart = computed(() => Boolean(this.selectedFile()) && this.canCreateDocActa() && !this.isProcessing() && !this.isReadingAudioMetadata());
 
   ngOnInit(): void {
     const actaId = this.route.snapshot.queryParamMap.get('actaId');
@@ -153,7 +157,7 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
 
   startJob(): void {
     const file = this.selectedFile();
-    if (!file || this.isReadingAudioMetadata()) {
+    if (!file || !this.canCreateDocActa() || this.isReadingAudioMetadata()) {
       return;
     }
 
@@ -223,7 +227,7 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
 
   saveActa(payload: ActaUpdatePayload): void {
     const acta = this.acta();
-    if (!acta) {
+    if (!acta || !this.canUpdateDocActa()) {
       return;
     }
 
@@ -244,7 +248,7 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
 
   saveTranscription(transcription: string): void {
     const acta = this.acta();
-    if (!acta) {
+    if (!acta || !this.canUpdateDocActa()) {
       return;
     }
 
@@ -265,7 +269,7 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
 
   saveSpeakerNames(names: Record<string, string>): void {
     const acta = this.acta();
-    if (!acta) {
+    if (!acta || !this.canUpdateDocActa()) {
       return;
     }
 
@@ -285,7 +289,7 @@ export class DocActaPageComponent implements OnInit, OnDestroy {
 
   async regenerateActa(): Promise<void> {
     const acta = this.acta();
-    if (!acta) {
+    if (!acta || !this.canUpdateDocActa()) {
       return;
     }
 

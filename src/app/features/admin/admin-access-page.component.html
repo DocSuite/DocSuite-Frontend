@@ -1,0 +1,316 @@
+<main class="min-h-screen bg-surface-50 p-4 text-surface-900 sm:p-6 lg:p-8">
+  <section class="mx-auto max-w-6xl">
+    <app-page-header
+      eyebrow="DocSuite / Admin"
+      title="Accesos"
+      description="Gestion de usuarios, roles y permisos."
+    >
+      <button
+        pageHeaderActions
+        class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+        type="button"
+        [disabled]="isLoading()"
+        (click)="loadAccessData()"
+      >
+        <i class="pi pi-refresh"></i>
+        Actualizar
+      </button>
+    </app-page-header>
+
+    <app-alert-message [message]="errorMessage()" />
+
+    <div class="mb-5 inline-flex overflow-hidden rounded-lg border border-surface-200 bg-white">
+      <button
+        class="px-4 py-2 text-sm font-semibold transition-colors"
+        type="button"
+        [ngClass]="activeTab() === 'users' ? 'bg-surface-900 text-white' : 'text-slate-600 hover:bg-surface-50'"
+        (click)="setTab('users')"
+      >
+        Usuarios
+      </button>
+      <button
+        class="border-l border-surface-200 px-4 py-2 text-sm font-semibold transition-colors"
+        type="button"
+        [ngClass]="activeTab() === 'roles' ? 'bg-surface-900 text-white' : 'text-slate-600 hover:bg-surface-50'"
+        (click)="setTab('roles')"
+      >
+        Roles
+      </button>
+      <button
+        class="border-l border-surface-200 px-4 py-2 text-sm font-semibold transition-colors"
+        type="button"
+        [ngClass]="activeTab() === 'permissions' ? 'bg-surface-900 text-white' : 'text-slate-600 hover:bg-surface-50'"
+        (click)="setTab('permissions')"
+      >
+        Permisos
+      </button>
+    </div>
+
+    <app-loading-state [visible]="isLoading()" message="Cargando accesos." containerClass="px-5 py-6" />
+
+    <div *ngIf="!isLoading() && activeTab() === 'users'" class="mb-5 flex justify-end">
+      <button
+        class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
+        type="button"
+        (click)="openCreateUser()"
+      >
+        <i class="pi pi-user-plus"></i>
+        Nuevo usuario
+      </button>
+    </div>
+
+    <section *ngIf="!isLoading() && activeTab() === 'users'" class="overflow-hidden rounded-xl border border-surface-200 bg-white">
+      <div class="grid grid-cols-[1.4fr_0.7fr_1fr_0.7fr_1fr] gap-4 border-b border-surface-200 bg-surface-50 px-5 py-3 text-xs font-semibold uppercase text-slate-500">
+        <span>Usuario</span>
+        <span>DNI</span>
+        <span>Rol</span>
+        <span>Estado</span>
+        <span>Acciones</span>
+      </div>
+
+      <article *ngFor="let user of users()" class="grid grid-cols-[1.4fr_0.7fr_1fr_0.7fr_1fr] gap-4 border-b border-surface-200 px-5 py-4 text-sm last:border-b-0">
+        <div class="min-w-0">
+          <p class="truncate font-semibold text-surface-900">{{ user.full_name }}</p>
+          <p class="truncate text-xs text-slate-500">{{ user.email }}</p>
+        </div>
+        <span class="font-mono text-sm font-semibold text-slate-600">{{ user.dni || 'Sin DNI' }}</span>
+        <select
+          class="rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 focus:border-brand-600 focus:outline-none disabled:cursor-not-allowed disabled:bg-surface-50"
+          [disabled]="isSaving()"
+          [ngModel]="user.role?.id"
+          (ngModelChange)="updateUserRole(user, $event)"
+        >
+          <option *ngFor="let role of roles()" [ngValue]="role.id">{{ role.name }}</option>
+        </select>
+        <span class="inline-flex w-fit items-center rounded-full border border-surface-200 bg-surface-50 px-3 py-1 text-xs font-semibold text-slate-600">
+          {{ user.is_active ? 'Activo' : 'Inactivo' }}
+        </span>
+        <div class="flex flex-wrap gap-2">
+          <button
+            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 bg-white text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+            type="button"
+            (click)="openEditUser(user)"
+            title="Editar usuario"
+          >
+            <i class="pi pi-pencil"></i>
+          </button>
+          <button
+            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 bg-white text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            [disabled]="isSaving()"
+            (click)="updateUserStatus(user, !user.is_active)"
+            [title]="user.is_active ? 'Desactivar' : 'Activar'"
+          >
+            <i class="pi" [ngClass]="user.is_active ? 'pi-ban' : 'pi-check'"></i>
+          </button>
+        </div>
+      </article>
+    </section>
+
+    <section *ngIf="!isLoading() && activeTab() === 'roles'" class="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
+      <form class="rounded-xl border border-surface-200 bg-white p-5" (ngSubmit)="saveRole()">
+        <h2 class="text-base font-semibold text-surface-900">{{ editingRoleId() ? 'Editar rol' : 'Nuevo rol' }}</h2>
+        <label class="mt-4 block text-sm font-semibold text-slate-700">
+          Nombre
+          <input
+            class="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-900 focus:border-brand-600 focus:outline-none"
+            type="text"
+            [ngModel]="roleName()"
+            (ngModelChange)="roleName.set($event)"
+            name="roleName"
+          />
+        </label>
+        <label class="mt-4 block text-sm font-semibold text-slate-700">
+          Descripcion
+          <textarea
+            class="mt-2 min-h-24 w-full resize-y rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-900 focus:border-brand-600 focus:outline-none"
+            [ngModel]="roleDescription()"
+            (ngModelChange)="roleDescription.set($event)"
+            name="roleDescription"
+          ></textarea>
+        </label>
+        <div class="mt-5 flex flex-wrap gap-3">
+          <button
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+            type="submit"
+            [disabled]="isSaving()"
+          >
+            <i class="pi pi-save"></i>
+            Guardar
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+            type="button"
+            (click)="resetRoleForm()"
+          >
+            <i class="pi pi-times"></i>
+            Limpiar
+          </button>
+        </div>
+      </form>
+
+      <section class="overflow-hidden rounded-xl border border-surface-200 bg-white">
+        <div class="border-b border-surface-200 bg-surface-50 px-5 py-3 text-xs font-semibold uppercase text-slate-500">
+          Roles registrados
+        </div>
+        <article *ngFor="let role of roles()" class="flex items-center gap-4 border-b border-surface-200 px-5 py-4 last:border-b-0">
+          <div class="min-w-0 flex-1">
+            <p class="truncate text-sm font-semibold text-surface-900">{{ role.name }}</p>
+            <p class="truncate text-xs text-slate-500">{{ roleDescriptionText(role) }}</p>
+          </div>
+          <span *ngIf="role.is_system" class="rounded-full border border-surface-200 bg-surface-50 px-2 py-0.5 text-xs font-semibold text-slate-500">
+            Sistema
+          </span>
+          <button
+            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 bg-white text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+            type="button"
+            (click)="editRole(role)"
+            title="Editar rol"
+          >
+            <i class="pi pi-pencil"></i>
+          </button>
+          <button
+            class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 bg-white text-slate-700 transition-colors hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+            type="button"
+            [disabled]="role.is_system || isSaving()"
+            (click)="deleteRole(role)"
+            title="Eliminar rol"
+          >
+            <i class="pi pi-trash"></i>
+          </button>
+        </article>
+      </section>
+    </section>
+
+    <section *ngIf="!isLoading() && activeTab() === 'permissions'" class="rounded-xl border border-surface-200 bg-white">
+      <div class="flex flex-col gap-3 border-b border-surface-200 bg-surface-50 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <label class="text-sm font-semibold text-slate-700">
+          Rol
+          <select
+            class="ml-0 mt-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 focus:border-brand-600 focus:outline-none sm:ml-3 sm:mt-0"
+            [ngModel]="selectedRoleId()"
+            (ngModelChange)="selectRole($event)"
+          >
+            <option *ngFor="let role of roles()" [ngValue]="role.id">{{ role.name }}</option>
+          </select>
+        </label>
+        <button
+          class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+          type="button"
+          [disabled]="isSaving() || !selectedRoleId()"
+          (click)="savePermissions()"
+        >
+          <i class="pi pi-save"></i>
+          Guardar permisos
+        </button>
+      </div>
+
+      <div class="grid grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr_0.7fr] gap-4 border-b border-surface-200 px-5 py-3 text-xs font-semibold uppercase text-slate-500">
+        <span>Vista</span>
+        <span>Leer</span>
+        <span>Crear</span>
+        <span>Editar</span>
+        <span>Eliminar</span>
+      </div>
+      <article *ngFor="let permission of permissions()" class="grid grid-cols-[1.2fr_0.7fr_0.7fr_0.7fr_0.7fr] gap-4 border-b border-surface-200 px-5 py-4 text-sm last:border-b-0">
+        <div class="min-w-0">
+          <p class="truncate font-semibold text-surface-900">{{ permission.name }}</p>
+          <p class="truncate text-xs text-slate-500">{{ permission.route }}</p>
+        </div>
+        <input class="h-4 w-4" type="checkbox" [ngModel]="permission.can_read" (ngModelChange)="togglePermission(permission, 'can_read', $event)" />
+        <input class="h-4 w-4" type="checkbox" [ngModel]="permission.can_create" (ngModelChange)="togglePermission(permission, 'can_create', $event)" />
+        <input class="h-4 w-4" type="checkbox" [ngModel]="permission.can_update" (ngModelChange)="togglePermission(permission, 'can_update', $event)" />
+        <input class="h-4 w-4" type="checkbox" [ngModel]="permission.can_delete" (ngModelChange)="togglePermission(permission, 'can_delete', $event)" />
+      </article>
+    </section>
+  </section>
+
+  <div *ngIf="userFormOpen()" class="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-4 backdrop-blur-sm" (click)="closeUserForm()">
+    <form class="w-full max-w-xl rounded-xl border border-surface-200 bg-white p-6 shadow-xl" (click)="$event.stopPropagation()" (ngSubmit)="saveUserForm()">
+      <h2 class="text-base font-semibold text-surface-900">{{ editingUserId() ? 'Editar usuario' : 'Nuevo usuario' }}</h2>
+      <div class="mt-5 grid gap-4 sm:grid-cols-2">
+        <label class="block text-sm font-semibold text-slate-700 sm:col-span-2">
+          Nombre completo
+          <input
+            class="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-900 focus:border-brand-600 focus:outline-none"
+            type="text"
+            [ngModel]="userFullName()"
+            (ngModelChange)="userFullName.set($event)"
+            name="userFullName"
+          />
+        </label>
+        <label class="block text-sm font-semibold text-slate-700">
+          Correo
+          <input
+            class="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-900 focus:border-brand-600 focus:outline-none"
+            type="email"
+            [ngModel]="userEmail()"
+            (ngModelChange)="userEmail.set($event)"
+            name="userEmail"
+          />
+        </label>
+        <label class="block text-sm font-semibold text-slate-700">
+          DNI
+          <input
+            class="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2 font-mono text-sm text-surface-900 focus:border-brand-600 focus:outline-none"
+            type="text"
+            inputmode="numeric"
+            maxlength="8"
+            [ngModel]="userDni()"
+            (ngModelChange)="onUserDniInput($event)"
+            name="userDni"
+          />
+        </label>
+        <label class="block text-sm font-semibold text-slate-700 sm:col-span-2">
+          Contrasena temporal
+          <span class="mt-2 flex items-center rounded-lg border border-surface-200 bg-surface-50 px-3 py-2">
+            <input
+              class="min-w-0 flex-1 bg-transparent font-mono text-sm text-surface-900 outline-none"
+              [type]="showTemporaryPassword() ? 'text' : 'password'"
+              [ngModel]="userDni()"
+              name="temporaryPassword"
+              readonly
+            />
+            <button
+              class="ml-2 text-slate-500 transition-colors hover:text-brand-600"
+              type="button"
+              [attr.aria-label]="showTemporaryPassword() ? 'Ocultar contrasena temporal' : 'Mostrar contrasena temporal'"
+              (click)="toggleTemporaryPassword()"
+            >
+              <i class="pi" [ngClass]="showTemporaryPassword() ? 'pi-eye-slash' : 'pi-eye'"></i>
+            </button>
+          </span>
+        </label>
+        <label class="block text-sm font-semibold text-slate-700 sm:col-span-2">
+          Rol
+          <select
+            class="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 focus:border-brand-600 focus:outline-none"
+            [ngModel]="userRoleId()"
+            (ngModelChange)="userRoleId.set($event)"
+            name="userRoleId"
+          >
+            <option *ngFor="let role of roles()" [ngValue]="role.id">{{ role.name }}</option>
+          </select>
+        </label>
+      </div>
+      <p class="mt-4 text-xs font-semibold text-slate-500">El DNI se usa como contrasena temporal y se informa por correo al usuario.</p>
+      <div class="mt-5 flex justify-end gap-3">
+        <button
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+          type="button"
+          (click)="closeUserForm()"
+        >
+          Cancelar
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+          type="submit"
+          [disabled]="isSaving()"
+        >
+          <i class="pi pi-save"></i>
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</main>

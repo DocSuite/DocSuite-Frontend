@@ -12,6 +12,7 @@ interface SidebarItem {
   route: string;
   badge?: string;
   disabled?: boolean;
+  adminOnly?: boolean;
 }
 
 @Component({
@@ -34,6 +35,7 @@ export class SidebarComponent implements OnInit {
     { label: 'DocActa', icon: 'pi-microphone', route: '/doc-acta' },
     { label: 'Historial', icon: 'pi-history', route: '/history' },
     { label: 'Auditorias', icon: 'pi-shield', route: '/audits' },
+    { label: 'Admin', icon: 'pi-cog', route: '/admin/access' },
     { label: 'Mi perfil', icon: 'pi-user', route: '/profile' },
   ];
 
@@ -60,6 +62,10 @@ export class SidebarComponent implements OnInit {
 
   get displayEmail(): string {
     return this.user()?.email || 'sesion activa';
+  }
+
+  get visibleWorkspaceItems(): SidebarItem[] {
+    return this.workspaceItems.filter((item) => this.authService.canReadPath(item.route));
   }
 
   async logout(): Promise<void> {

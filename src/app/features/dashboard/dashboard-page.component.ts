@@ -1,28 +1,10 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
-interface MetricCard {
-  label: string;
-  value: string;
-  detail: string;
-  icon: string;
-  tone: string;
-}
-
-interface ActivityItem {
-  title: string;
-  type: string;
-  reference: string;
-  icon: string;
-  status: string;
-}
-
-interface AuditItem {
-  title: string;
-  detail: string;
-  severity: string;
-}
+import { AuthService } from '../../core/auth/auth.service';
+import { DashboardActivityItem, DashboardMetric, DashboardSummary } from './dashboard.models';
+import { DashboardService } from './dashboard.service';
 
 @Component({
   selector: 'app-dashboard-page',
@@ -31,70 +13,96 @@ interface AuditItem {
   templateUrl: './dashboard-page.component.html',
   styleUrl: './dashboard-page.component.scss',
 })
-export class DashboardPageComponent {
-  readonly metrics: MetricCard[] = [
-    {
-      label: 'Documentos analizados',
-      value: '184',
-      detail: '28 esta semana',
-      icon: 'pi-file',
-      tone: 'text-brand-600 bg-surface-50',
-    },
-    {
-      label: 'Actas generadas',
-      value: '42',
-      detail: '9 esta semana',
-      icon: 'pi-microphone',
-      tone: 'text-brand-600 bg-surface-50',
-    },
-    {
-      label: 'Auditorias registradas',
-      value: '17',
-      detail: '3 requieren revision',
-      icon: 'pi-shield',
-      tone: 'text-surface-800 bg-surface-50',
-    },
-  ];
+export class DashboardPageComponent implements OnInit {
+  private readonly dashboardService = inject(DashboardService);
+  readonly auth = inject(AuthService);
 
-  readonly activity: ActivityItem[] = [
-    {
-      title: 'Reunion Comite Academico',
-      type: 'Acta',
-      reference: 'Hace 12 min',
-      icon: 'pi-microphone',
-      status: 'Completado',
-    },
-    {
-      title: 'tesis-marquez-cap3-revisado.pdf',
-      type: 'Analisis',
-      reference: 'Hace 1 hora',
-      icon: 'pi-file',
-      status: 'Completado',
-    },
-    {
-      title: 'Defensa de Proyecto - L. Vargas',
-      type: 'Acta',
-      reference: 'Ayer 16:42',
-      icon: 'pi-microphone',
-      status: 'Revisar',
-    },
-  ];
+  readonly summary = signal<DashboardSummary | null>(null);
+  readonly isLoading = signal(false);
+  readonly errorMessage = signal<string | null>(null);
 
-  readonly audits: AuditItem[] = [
-    {
-      title: 'Inicio de sesion administrativo',
-      detail: 'admin@docsuite.edu.pe · hace 8 min',
-      severity: 'Normal',
-    },
-    {
-      title: 'Acta editada',
-      detail: 'Reunion Comite Academico · hace 22 min',
-      severity: 'Revision',
-    },
-    {
-      title: 'Exportacion DOCX',
-      detail: 'Defensa de Proyecto · ayer',
-      severity: 'Normal',
-    },
-  ];
+  readonly visibleMetrics = computed(() => this.summary()?.metrics ?? []);
+  readonly maxTrendValue = computed(() => {
+    const values = this.summary()?.trend.flatMap((point) => [point.analyses, point.actas]) ?? [0];
+    return Math.max(1, ...values);
+  });
+  readonly distributionTotal = computed(() =>
+    (this.summary()?.distribution ?? []).reduce((total, item) => total + item.value, 0),
+  );
+  readonly taskTotal = computed(() => {
+    const tasks = this.summary()?.tasks;
+    return (tasks?.pending ?? 0) + (tasks?.completed ?? 0);
+  });
+
+  ngOnInit(): void {
+    this.loadDashboard();
+  }
+
+  loadDashboard(): void {
+    this.isLoading.set(true);
+    this.errorMessage.set(null);
+    this.dashboardService.getSummary().subscribe({
+      next: (summary) => {
+        this.summary.set(summary);
+        this.isLoading.set(false);
+      },
+      error: () => {
+        this.errorMessage.set('No se pudo cargar el resumen del dashboard.');
+        this.isLoading.set(false);
+      },
+    });
+  }
+
+  canRead(path: string): boolean {
+    return this.auth.canReadPath(path);
+  }
+
+  canCreate(path: string): boolean {
+    return this.auth.canCreatePath(path);
+  }
+
+  metricIcon(metric: DashboardMetric): string {
+    return {
+      analyses: 'pi-file',
+      actas: 'pi-microphone',
+      tasks: 'pi-check-square',
+    }[metric.key] ?? 'pi-chart-bar';
+  }
+
+  activityIcon(item: DashboardActivityItem): string {
+    return item.type === 'Acta' ? 'pi-microphone' : 'pi-file';
+  }
+
+  trendBarWidth(value: number): number {
+    return Math.round((value / this.maxTrendValue()) * 100);
+  }
+
+  distributionWidth(value: number): number {
+    const total = this.distributionTotal();
+    return total ? Math.round((value / total) * 100) : 0;
+  }
+
+  taskWidth(value: number): number {
+    const total = this.taskTotal();
+    return total ? Math.round((value / total) * 100) : 0;
+  }
+
+  formatRelativeDate(value: string): string {
+    const date = new Date(value);
+    const diffMs = Date.now() - date.getTime();
+    const minutes = Math.max(0, Math.floor(diffMs / 60000));
+    if (minutes < 1) {
+      return 'Ahora';
+    }
+    if (minutes < 60) {
+      return `Hace ${minutes} min`;
+    }
+
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) {
+      return `Hace ${hours} h`;
+    }
+
+    return new Intl.DateTimeFormat('es-PE', { dateStyle: 'medium' }).format(date);
+  }
 }

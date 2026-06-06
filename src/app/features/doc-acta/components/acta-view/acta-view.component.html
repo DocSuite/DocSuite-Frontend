@@ -20,7 +20,7 @@
           </div>
         </div>
 
-        <div *ngIf="acta && !isEditing" class="flex flex-col gap-2 sm:flex-row">
+        <div *ngIf="acta && !isEditing && canUpdate" class="flex flex-col gap-2 sm:flex-row">
           <button
             class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
             type="button"
@@ -92,7 +92,7 @@
             <button
               class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
               type="button"
-              [disabled]="isSaving || !draftResult.trim()"
+              [disabled]="isSaving || !canUpdate || !draftResult.trim()"
               aria-label="Guardar cambios del acta"
               title="Guardar cambios (Ctrl+S)"
               (click)="saveChanges()"
