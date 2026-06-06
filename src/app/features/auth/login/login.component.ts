@@ -1,14 +1,14 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-login',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, RouterLink],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss',
 })
@@ -36,7 +36,18 @@ export class LoginComponent {
 
     this.authService.login(this.form.getRawValue()).subscribe({
       next: () => {
-        void this.router.navigate(['/dashboard']);
+        this.authService.me().subscribe({
+          next: (user) => {
+            const path = user.must_change_password
+              ? '/change-password'
+              : this.authService.firstAccessiblePath();
+            void this.router.navigate([path]);
+          },
+          error: () => {
+            this.errorMessage.set('No se pudo cargar la informacion del usuario.');
+            this.isSubmitting.set(false);
+          },
+        });
       },
       error: () => {
         this.errorMessage.set('No se pudo iniciar sesión. Revisa tus credenciales.');

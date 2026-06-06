@@ -22,6 +22,7 @@ export class ActaViewComponent implements OnChanges, OnDestroy {
   @Input() acta: Acta | null = null;
   @Input() isSaving = false;
   @Input() isRegenerating = false;
+  @Input() canUpdate = true;
   @Output() saveActa = new EventEmitter<ActaUpdatePayload>();
   @Output() regenerateActa = new EventEmitter<void>();
 
@@ -56,7 +57,7 @@ export class ActaViewComponent implements OnChanges, OnDestroy {
   }
 
   startEditing(): void {
-    if (!this.acta) {
+    if (!this.acta || !this.canUpdate) {
       return;
     }
 
@@ -84,6 +85,10 @@ export class ActaViewComponent implements OnChanges, OnDestroy {
   }
 
   async removeTask(index: number): Promise<void> {
+    if (!this.canUpdate) {
+      return;
+    }
+
     const confirmed = await this.confirmDialogService.confirm({
       title: 'Quitar tarea',
       message: 'Esta tarea se eliminará del borrador del acta.',
@@ -100,7 +105,7 @@ export class ActaViewComponent implements OnChanges, OnDestroy {
   }
 
   onDraftChange(): void {
-    if (!this.isEditing) {
+    if (!this.isEditing || !this.canUpdate) {
       return;
     }
 
@@ -113,6 +118,10 @@ export class ActaViewComponent implements OnChanges, OnDestroy {
   }
 
   saveChanges(): void {
+    if (!this.canUpdate) {
+      return;
+    }
+
     this.saveActa.emit({
       result: this.draftResult.trim(),
       tasks: this.draftTasks

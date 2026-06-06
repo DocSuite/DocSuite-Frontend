@@ -8,7 +8,17 @@
       </div>
 
       <div class="flex flex-col gap-3 sm:flex-row">
+        <button
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:opacity-60"
+          type="button"
+          [disabled]="isLoading()"
+          (click)="loadDashboard()"
+        >
+          <i class="pi pi-refresh"></i>
+          Actualizar
+        </button>
         <a
+          *ngIf="canRead('/audits')"
           class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
           routerLink="/audits"
         >
@@ -16,6 +26,7 @@
           Ver auditorias
         </a>
         <a
+          *ngIf="canCreate('/doc-acta')"
           class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700"
           routerLink="/doc-acta"
         >
@@ -25,128 +36,217 @@
       </div>
     </header>
 
-    <section class="mb-6 grid gap-4 xl:grid-cols-3">
-      <article *ngFor="let metric of metrics" class="rounded-xl border border-surface-200 bg-white p-5">
-        <div class="mb-5 flex items-center justify-between gap-4">
-          <div class="flex h-11 w-11 items-center justify-center rounded-lg" [ngClass]="metric.tone">
-            <i class="pi text-lg" [ngClass]="metric.icon"></i>
-          </div>
-          <span class="rounded-full border border-surface-200 bg-surface-50 px-3 py-1 text-xs font-semibold text-slate-600">
-            Activo
-          </span>
-        </div>
-        <p class="text-xs font-semibold uppercase text-slate-500">{{ metric.label }}</p>
-        <div class="mt-3 flex items-end gap-2">
-          <strong class="text-3xl font-semibold tracking-normal text-surface-900">{{ metric.value }}</strong>
-          <span class="pb-1 text-sm font-medium text-slate-500">{{ metric.detail }}</span>
-        </div>
-      </article>
+    <p *ngIf="errorMessage()" class="mb-5 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+      {{ errorMessage() }}
+    </p>
+
+    <section *ngIf="isLoading()" class="mb-6 rounded-xl border border-surface-200 bg-white px-5 py-6 text-sm text-slate-600">
+      <i class="pi pi-spin pi-spinner mr-2 text-brand-600"></i>
+      Cargando dashboard.
     </section>
 
-    <section class="grid gap-5 xl:grid-cols-[1fr_360px]">
-      <div class="space-y-5">
-        <section class="rounded-xl border border-surface-200 bg-white">
-          <div class="flex items-center justify-between border-b border-surface-200 px-5 py-4">
-            <div>
-              <h2 class="text-base font-semibold text-surface-900">Actividad reciente</h2>
-              <p class="mt-1 text-sm text-slate-500">Ultimos movimientos del espacio de trabajo.</p>
+    <ng-container *ngIf="summary() as data">
+      <section class="mb-6 grid gap-4 xl:grid-cols-3">
+        <article *ngFor="let metric of visibleMetrics()" class="rounded-xl border border-surface-200 bg-white p-5">
+          <div class="mb-5 flex items-center justify-between gap-4">
+            <div class="flex h-11 w-11 items-center justify-center rounded-lg bg-surface-50 text-brand-600">
+              <i class="pi text-lg" [ngClass]="metricIcon(metric)"></i>
             </div>
             <span class="rounded-full border border-surface-200 bg-surface-50 px-3 py-1 text-xs font-semibold text-slate-600">
-              7 registros
+              Real
             </span>
           </div>
+          <p class="text-xs font-semibold uppercase text-slate-500">{{ metric.label }}</p>
+          <div class="mt-3 flex items-end gap-2">
+            <strong class="text-3xl font-semibold tracking-normal text-surface-900">{{ metric.value }}</strong>
+            <span class="pb-1 text-sm font-medium text-slate-500">{{ metric.detail }}</span>
+          </div>
+        </article>
+      </section>
 
-          <div class="divide-y divide-surface-200">
-            <article *ngFor="let item of activity" class="flex items-center gap-4 px-5 py-4">
-              <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-surface-200 bg-surface-50 text-brand-600">
-                <i class="pi" [ngClass]="item.icon"></i>
+      <section class="mb-6 grid gap-5 xl:grid-cols-[1fr_360px]">
+        <section class="rounded-xl border border-surface-200 bg-white p-5">
+          <div class="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h2 class="text-base font-semibold text-surface-900">Actividad semanal</h2>
+              <p class="mt-1 text-sm text-slate-500">Documentos y actas creados en los ultimos 7 dias.</p>
+            </div>
+            <i class="pi pi-chart-bar text-brand-600"></i>
+          </div>
+
+          <div class="grid h-44 grid-cols-7 items-end gap-3">
+            <div *ngFor="let point of data.trend" class="flex h-full min-w-0 flex-col justify-end gap-2">
+              <div class="flex min-h-32 items-end gap-1">
+                <span
+                  class="block w-full rounded-t bg-brand-600"
+                  [style.height.%]="trendBarWidth(point.analyses)"
+                  [title]="'Documentos: ' + point.analyses"
+                ></span>
+                <span
+                  class="block w-full rounded-t bg-surface-800"
+                  [style.height.%]="trendBarWidth(point.actas)"
+                  [title]="'Actas: ' + point.actas"
+                ></span>
               </div>
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <h3 class="truncate text-sm font-semibold text-surface-900">{{ item.title }}</h3>
-                  <span class="rounded-full border border-surface-200 bg-surface-50 px-2 py-0.5 text-xs font-semibold text-slate-600">
-                    {{ item.type }}
+              <span class="truncate text-center text-xs font-medium text-slate-500">{{ point.label }}</span>
+            </div>
+          </div>
+
+          <div class="mt-4 flex flex-wrap gap-4 text-xs font-semibold text-slate-600">
+            <span class="inline-flex items-center gap-2"><span class="h-2 w-4 rounded bg-brand-600"></span>Documentos</span>
+            <span class="inline-flex items-center gap-2"><span class="h-2 w-4 rounded bg-surface-800"></span>Actas</span>
+          </div>
+        </section>
+
+        <section class="rounded-xl border border-surface-200 bg-white p-5">
+          <div class="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <h2 class="text-base font-semibold text-surface-900">Tareas de actas</h2>
+              <p class="mt-1 text-sm text-slate-500">Pendientes frente a completadas.</p>
+            </div>
+            <i class="pi pi-check-square text-brand-600"></i>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <div class="mb-2 flex justify-between text-sm">
+                <span class="font-medium text-slate-600">Pendientes</span>
+                <span class="font-semibold text-surface-900">{{ data.tasks.pending }}</span>
+              </div>
+              <div class="h-3 overflow-hidden rounded-full bg-surface-100">
+                <span class="block h-full rounded-full bg-surface-800" [style.width.%]="taskWidth(data.tasks.pending)"></span>
+              </div>
+            </div>
+
+            <div>
+              <div class="mb-2 flex justify-between text-sm">
+                <span class="font-medium text-slate-600">Completadas</span>
+                <span class="font-semibold text-surface-900">{{ data.tasks.completed }}</span>
+              </div>
+              <div class="h-3 overflow-hidden rounded-full bg-surface-100">
+                <span class="block h-full rounded-full bg-brand-600" [style.width.%]="taskWidth(data.tasks.completed)"></span>
+              </div>
+            </div>
+          </div>
+
+          <p *ngIf="!taskTotal()" class="mt-4 rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm text-slate-500">
+            Todavia no hay tareas registradas en actas.
+          </p>
+        </section>
+      </section>
+
+      <section class="grid gap-5 xl:grid-cols-[1fr_360px]">
+        <div class="space-y-5">
+          <section class="rounded-xl border border-surface-200 bg-white">
+            <div class="flex items-center justify-between border-b border-surface-200 px-5 py-4">
+              <div>
+                <h2 class="text-base font-semibold text-surface-900">Actividad reciente</h2>
+                <p class="mt-1 text-sm text-slate-500">Ultimos movimientos del espacio de trabajo.</p>
+              </div>
+              <span class="rounded-full border border-surface-200 bg-surface-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                {{ data.activity.length }} registros
+              </span>
+            </div>
+
+            <div class="divide-y divide-surface-200">
+              <article *ngFor="let item of data.activity" class="flex items-center gap-4 px-5 py-4">
+                <div class="flex h-10 w-10 items-center justify-center rounded-lg border border-surface-200 bg-surface-50 text-brand-600">
+                  <i class="pi" [ngClass]="activityIcon(item)"></i>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <h3 class="truncate text-sm font-semibold text-surface-900">{{ item.title }}</h3>
+                    <span class="rounded-full border border-surface-200 bg-surface-50 px-2 py-0.5 text-xs font-semibold text-slate-600">
+                      {{ item.type }}
+                    </span>
+                  </div>
+                  <p class="mt-1 text-xs font-medium text-slate-500">{{ item.reference }}</p>
+                </div>
+                <span class="rounded-full border border-surface-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
+                  {{ formatRelativeDate(item.created_at) }}
+                </span>
+              </article>
+
+              <p *ngIf="!data.activity.length" class="px-5 py-6 text-sm text-slate-500">
+                Todavia no hay actividad registrada.
+              </p>
+            </div>
+          </section>
+
+          <section *ngIf="canRead('/audits')" class="rounded-xl border border-surface-200 bg-white p-5">
+            <div class="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <h2 class="text-base font-semibold text-surface-900">Auditoria</h2>
+                <p class="mt-1 text-sm text-slate-500">Eventos recientes para trazabilidad.</p>
+              </div>
+              <a class="text-sm font-semibold text-brand-600" routerLink="/audits">Abrir vista</a>
+            </div>
+
+            <div class="grid gap-3 lg:grid-cols-3">
+              <article *ngFor="let audit of data.audits" class="rounded-lg border border-surface-200 bg-surface-50 p-4">
+                <div class="mb-3 flex items-center justify-between gap-3">
+                  <i class="pi pi-shield text-brand-600"></i>
+                  <span class="rounded-full border border-surface-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-600">
+                    {{ audit.status }}
                   </span>
                 </div>
-                <p class="mt-1 text-xs font-medium text-slate-500">{{ item.reference }}</p>
-              </div>
-              <span class="rounded-full border border-surface-200 bg-white px-3 py-1 text-xs font-semibold text-slate-600">
-                {{ item.status }}
-              </span>
-            </article>
-          </div>
-        </section>
-
-        <section class="rounded-xl border border-surface-200 bg-white p-5">
-          <div class="mb-4 flex items-center justify-between gap-4">
-            <div>
-              <h2 class="text-base font-semibold text-surface-900">Auditoria</h2>
-              <p class="mt-1 text-sm text-slate-500">Eventos relevantes para trazabilidad.</p>
+                <h3 class="text-sm font-semibold text-surface-900">{{ audit.title }}</h3>
+                <p class="mt-2 text-xs leading-5 text-slate-500">{{ audit.detail }} · {{ formatRelativeDate(audit.created_at) }}</p>
+              </article>
             </div>
-            <a class="text-sm font-semibold text-brand-600" routerLink="/audits">Abrir vista</a>
-          </div>
 
-          <div class="grid gap-3 lg:grid-cols-3">
-            <article *ngFor="let audit of audits" class="rounded-lg border border-surface-200 bg-surface-50 p-4">
-              <div class="mb-3 flex items-center justify-between gap-3">
-                <i class="pi pi-shield text-brand-600"></i>
-                <span class="rounded-full border border-surface-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-600">
-                  {{ audit.severity }}
+            <p *ngIf="!data.audits.length" class="rounded-lg border border-surface-200 bg-surface-50 px-3 py-2 text-sm text-slate-500">
+              Todavia no hay auditorias registradas.
+            </p>
+          </section>
+        </div>
+
+        <aside class="space-y-5">
+          <section class="rounded-xl border border-surface-200 bg-white p-5">
+            <h2 class="text-base font-semibold text-surface-900">Distribucion</h2>
+            <p class="mt-1 text-sm text-slate-500">Peso relativo del trabajo registrado.</p>
+
+            <div class="mt-4 space-y-4">
+              <div *ngFor="let item of data.distribution">
+                <div class="mb-2 flex justify-between text-sm">
+                  <span class="font-medium text-slate-600">{{ item.label }}</span>
+                  <span class="font-semibold text-surface-900">{{ item.value }}</span>
+                </div>
+                <div class="h-3 overflow-hidden rounded-full bg-surface-100">
+                  <span class="block h-full rounded-full bg-brand-600" [style.width.%]="distributionWidth(item.value)"></span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="rounded-xl border border-surface-200 bg-white p-5">
+            <h2 class="text-base font-semibold text-surface-900">Empezar</h2>
+            <div class="mt-4 space-y-3">
+              <a class="flex items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 p-4 transition-colors hover:border-brand-600 hover:bg-white" routerLink="/dashboard">
+                <span class="flex h-10 w-10 items-center justify-center rounded-lg border border-surface-200 bg-white text-brand-600">
+                  <i class="pi pi-file"></i>
                 </span>
-              </div>
-              <h3 class="text-sm font-semibold text-surface-900">{{ audit.title }}</h3>
-              <p class="mt-2 text-xs leading-5 text-slate-500">{{ audit.detail }}</p>
-            </article>
-          </div>
-        </section>
-      </div>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-semibold text-surface-900">Analizar documento</span>
+                  <span class="block text-xs text-slate-500">PDF · DOCX · TXT</span>
+                </span>
+                <i class="pi pi-angle-right text-xs text-slate-400"></i>
+              </a>
 
-      <aside class="space-y-5">
-        <section class="rounded-xl border border-surface-200 bg-white p-5">
-          <h2 class="text-base font-semibold text-surface-900">Empezar</h2>
-          <div class="mt-4 space-y-3">
-            <a class="flex items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 p-4 transition-colors hover:border-brand-600 hover:bg-white" routerLink="/dashboard">
-              <span class="flex h-10 w-10 items-center justify-center rounded-lg border border-surface-200 bg-white text-brand-600">
-                <i class="pi pi-file"></i>
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="block text-sm font-semibold text-surface-900">Analizar documento</span>
-                <span class="block text-xs text-slate-500">PDF · DOCX · TXT</span>
-              </span>
-              <i class="pi pi-angle-right text-xs text-slate-400"></i>
-            </a>
-
-            <a class="flex items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 p-4 transition-colors hover:border-brand-600 hover:bg-white" routerLink="/doc-acta">
-              <span class="flex h-10 w-10 items-center justify-center rounded-lg border border-surface-200 bg-white text-brand-600">
-                <i class="pi pi-microphone"></i>
-              </span>
-              <span class="min-w-0 flex-1">
-                <span class="block text-sm font-semibold text-surface-900">Generar acta</span>
-                <span class="block text-xs text-slate-500">MP3 · WAV · M4A</span>
-              </span>
-              <i class="pi pi-angle-right text-xs text-slate-400"></i>
-            </a>
-          </div>
-        </section>
-
-        <section class="rounded-xl border border-surface-200 bg-white p-5">
-          <h2 class="text-base font-semibold text-surface-900">Estado del sistema</h2>
-          <div class="mt-4 space-y-3">
-            <div class="flex items-center justify-between text-sm">
-              <span class="font-medium text-slate-600">API FastAPI</span>
-              <span class="font-semibold text-surface-900">Operativo</span>
+              <a *ngIf="canCreate('/doc-acta')" class="flex items-center gap-3 rounded-lg border border-surface-200 bg-surface-50 p-4 transition-colors hover:border-brand-600 hover:bg-white" routerLink="/doc-acta">
+                <span class="flex h-10 w-10 items-center justify-center rounded-lg border border-surface-200 bg-white text-brand-600">
+                  <i class="pi pi-microphone"></i>
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="block text-sm font-semibold text-surface-900">Generar acta</span>
+                  <span class="block text-xs text-slate-500">MP3 · WAV · M4A</span>
+                </span>
+                <i class="pi pi-angle-right text-xs text-slate-400"></i>
+              </a>
             </div>
-            <div class="flex items-center justify-between text-sm">
-              <span class="font-medium text-slate-600">Transcripcion audio</span>
-              <span class="font-semibold text-surface-900">Operativo</span>
-            </div>
-            <div class="flex items-center justify-between text-sm">
-              <span class="font-medium text-slate-600">Base de datos</span>
-              <span class="font-semibold text-surface-900">PostgreSQL</span>
-            </div>
-          </div>
-        </section>
-      </aside>
-    </section>
+          </section>
+        </aside>
+      </section>
+    </ng-container>
   </section>
 </main>

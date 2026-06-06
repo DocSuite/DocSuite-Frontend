@@ -44,6 +44,7 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   @Input() isLoading = false;
   @Input() isSaving = false;
   @Input() isSavingSpeakers = false;
+  @Input() canUpdate = true;
   @Output() saveTranscription = new EventEmitter<string>();
   @Output() saveSpeakers = new EventEmitter<Record<string, string>>();
 
@@ -111,6 +112,10 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   }
 
   startEditing(): void {
+    if (!this.canUpdate) {
+      return;
+    }
+
     this.draftTranscription = this.acta?.transcription ?? '';
     this.loadLocalDraft();
     this.isEditing = true;
@@ -137,7 +142,7 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   }
 
   onDraftChange(): void {
-    if (!this.isEditing) {
+    if (!this.isEditing || !this.canUpdate) {
       return;
     }
 
@@ -150,6 +155,10 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   }
 
   saveChanges(): void {
+    if (!this.canUpdate) {
+      return;
+    }
+
     this.saveTranscription.emit(this.draftTranscription.trim());
   }
 
@@ -179,6 +188,10 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   }
 
   openSpeakerEditor(): void {
+    if (!this.canUpdate) {
+      return;
+    }
+
     this.speakerDraft = this.speakers.reduce<Record<string, string>>((draft, speaker) => {
       draft[speaker] = speaker;
       return draft;
@@ -200,6 +213,10 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   }
 
   saveSpeakerNames(): void {
+    if (!this.canUpdate) {
+      return;
+    }
+
     const names = Object.entries(this.speakerDraft).reduce<Record<string, string>>((payload, [speaker, name]) => {
       const cleanName = name.trim();
       if (cleanName) {

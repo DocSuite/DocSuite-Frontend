@@ -9,6 +9,28 @@ export const routes: Routes = [
       import('./features/auth/login/login.component').then((module) => module.LoginComponent),
   },
   {
+    path: 'forgot-password',
+    loadComponent: () =>
+      import('./features/auth/forgot-password/forgot-password.component').then(
+        (module) => module.ForgotPasswordComponent,
+      ),
+  },
+  {
+    path: 'reset-password',
+    loadComponent: () =>
+      import('./features/auth/reset-password/reset-password.component').then(
+        (module) => module.ResetPasswordComponent,
+      ),
+  },
+  {
+    path: 'change-password',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/auth/change-password/change-password.component').then(
+        (module) => module.ChangePasswordComponent,
+      ),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () =>
@@ -40,6 +62,13 @@ export const routes: Routes = [
         loadComponent: () =>
           import('./features/audits/audits-page.component').then(
             (module) => module.AuditsPageComponent,
+          ),
+      },
+      {
+        path: 'admin/access',
+        loadComponent: () =>
+          import('./features/admin/admin-access-page.component').then(
+            (module) => module.AdminAccessPageComponent,
           ),
       },
       {

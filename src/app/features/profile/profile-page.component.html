@@ -4,7 +4,26 @@
       eyebrow="DocSuite / Perfil"
       title="Mi perfil"
       description="Informacion de la cuenta activa y estado del usuario."
-    />
+    >
+      <div pageHeaderActions class="flex flex-wrap gap-3">
+        <button
+          *ngIf="canUpdateProfile() && !isEditing()"
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+          type="button"
+          (click)="startEditing()"
+        >
+          <i class="pi pi-pencil"></i>
+          Editar perfil
+        </button>
+        <a
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+          routerLink="/change-password"
+        >
+          <i class="pi pi-lock"></i>
+          Cambiar contrasena
+        </a>
+      </div>
+    </app-page-header>
 
     <section class="rounded-xl border border-surface-200 bg-white p-5">
       <app-alert-message [message]="errorMessage()" />
@@ -19,6 +38,37 @@
           <p class="mt-1 text-sm text-slate-500">{{ user()?.email || 'Sesion activa' }}</p>
         </div>
       </div>
+
+      <form *ngIf="isEditing()" class="mt-6 rounded-lg border border-surface-200 bg-surface-50 p-4" (ngSubmit)="saveProfile()">
+        <label class="block text-sm font-semibold text-slate-700">
+          Nombre completo
+          <input
+            class="mt-2 w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-900 focus:border-brand-600 focus:outline-none"
+            type="text"
+            [ngModel]="fullNameDraft()"
+            (ngModelChange)="fullNameDraft.set($event)"
+            name="fullName"
+          />
+        </label>
+
+        <div class="mt-4 flex flex-wrap justify-end gap-3">
+          <button
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+            type="button"
+            (click)="cancelEditing()"
+          >
+            Cancelar
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+            type="submit"
+            [disabled]="isSaving()"
+          >
+            <i class="pi" [ngClass]="isSaving() ? 'pi-spin pi-spinner' : 'pi-save'"></i>
+            Guardar
+          </button>
+        </div>
+      </form>
 
       <div class="mt-6 grid gap-4 md:grid-cols-2">
         <div class="rounded-lg border border-surface-200 bg-surface-50 p-4">
