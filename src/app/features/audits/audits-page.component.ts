@@ -1,13 +1,16 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit, signal } from '@angular/core';
 
+import { AlertMessageComponent } from '../../shared/components/alert-message/alert-message.component';
+import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 import { AuditRecord } from './audit.models';
 import { AuditService } from './audit.service';
 
 @Component({
   selector: 'app-audits-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AlertMessageComponent, LoadingStateComponent, PageHeaderComponent],
   templateUrl: './audits-page.component.html',
   styleUrl: './audits-page.component.scss',
 })

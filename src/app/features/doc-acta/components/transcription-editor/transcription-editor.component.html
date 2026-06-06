@@ -1,0 +1,45 @@
+<textarea
+  id="docacta-transcription-draft"
+  class="min-h-[28rem] w-full resize-y rounded-lg border border-surface-200 bg-white px-4 py-3 text-sm leading-7 text-surface-900 outline-none transition-colors focus:border-brand-600"
+  [ngModel]="draftTranscription"
+  [disabled]="isSaving"
+  aria-describedby="docacta-transcription-help docacta-transcription-draft-status"
+  aria-label="Editar transcripcion generada"
+  (ngModelChange)="onDraftInput($event)"
+></textarea>
+<p id="docacta-transcription-help" class="mt-2 text-xs text-slate-500">
+  Los cambios se guardan como borrador local hasta que pulses Guardar transcripcion.
+</p>
+<p
+  *ngIf="draftStatus"
+  id="docacta-transcription-draft-status"
+  class="mt-2 text-xs font-semibold text-slate-600"
+  role="status"
+  aria-live="polite"
+>
+  {{ draftStatus }}
+</p>
+
+<div class="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+  <button
+    class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
+    type="button"
+    [disabled]="isSaving"
+    aria-label="Cancelar edicion de transcripcion"
+    title="Cancelar edicion (Esc)"
+    (click)="cancelEdit.emit()"
+  >
+    Cancelar
+  </button>
+  <button
+    class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+    type="button"
+    [disabled]="isSaving || !draftTranscription.trim()"
+    aria-label="Guardar transcripcion editada"
+    title="Guardar transcripcion (Ctrl+S)"
+    (click)="saveEdit.emit()"
+  >
+    <i class="pi" [ngClass]="isSaving ? 'pi-spin pi-spinner' : 'pi-save'"></i>
+    Guardar transcripcion
+  </button>
+</div>

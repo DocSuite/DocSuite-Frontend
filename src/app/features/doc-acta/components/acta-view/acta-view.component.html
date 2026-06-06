@@ -71,83 +71,12 @@
             </span>
           </label>
 
-          <section class="rounded-lg border border-surface-200 bg-white p-4">
-            <div class="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h3 class="text-sm font-semibold text-surface-900">Tabla de tareas</h3>
-                <p class="mt-1 text-xs text-slate-500">Responsables, fechas y estado de seguimiento.</p>
-              </div>
-              <button
-                class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
-                type="button"
-                [disabled]="isSaving"
-                aria-label="Agregar tarea al acta"
-                (click)="addTask()"
-              >
-                <i class="pi pi-plus"></i>
-                Agregar tarea
-              </button>
-            </div>
-
-            <div class="space-y-3">
-              <div
-                *ngFor="let task of draftTasks; let index = index; trackBy: trackByIndex"
-                class="grid gap-3 rounded-lg border border-surface-200 bg-surface-50 p-3 xl:grid-cols-[1.4fr_1fr_0.8fr_auto_auto]"
-              >
-                <input
-                  class="rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
-                  type="text"
-                  placeholder="Descripcion"
-                  [(ngModel)]="task.description"
-                  [disabled]="isSaving"
-                  [attr.aria-label]="'Descripcion de la tarea ' + (index + 1)"
-                  (ngModelChange)="onDraftChange()"
-                />
-                <input
-                  class="rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
-                  type="text"
-                  placeholder="Responsable"
-                  [(ngModel)]="task.owner"
-                  [disabled]="isSaving"
-                  [attr.aria-label]="'Responsable de la tarea ' + (index + 1)"
-                  (ngModelChange)="onDraftChange()"
-                />
-                <input
-                  class="rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-600"
-                  type="text"
-                  placeholder="Fecha"
-                  [(ngModel)]="task.due_date"
-                  [disabled]="isSaving"
-                  [attr.aria-label]="'Fecha de la tarea ' + (index + 1)"
-                  (ngModelChange)="onDraftChange()"
-                />
-                <label class="flex items-center gap-2 text-sm font-medium text-slate-600">
-                  <input
-                    class="h-4 w-4 rounded border-surface-200 text-brand-600"
-                    type="checkbox"
-                    [(ngModel)]="task.done"
-                    [disabled]="isSaving"
-                    [attr.aria-label]="'Marcar tarea ' + (index + 1) + ' como hecha'"
-                    (ngModelChange)="onDraftChange()"
-                  />
-                  Hecho
-                </label>
-                <button
-                  class="flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 bg-white text-slate-500 transition-colors hover:text-red-600 disabled:cursor-not-allowed disabled:text-slate-300"
-                  type="button"
-                  [disabled]="isSaving"
-                  (click)="removeTask(index)"
-                  aria-label="Quitar tarea"
-                >
-                  <i class="pi pi-times"></i>
-                </button>
-              </div>
-
-              <p *ngIf="!draftTasks.length" class="rounded-lg border border-surface-200 bg-surface-50 px-3 py-3 text-sm text-slate-500">
-                No hay tareas registradas.
-              </p>
-            </div>
-          </section>
+          <app-acta-task-editor
+            [(tasks)]="draftTasks"
+            [isSaving]="isSaving"
+            (draftChange)="onDraftChange()"
+            (removeTaskRequest)="removeTask($event)"
+          />
 
           <div class="flex flex-col gap-3 sm:flex-row sm:justify-end">
             <button
@@ -155,6 +84,7 @@
               type="button"
               [disabled]="isSaving"
               aria-label="Cancelar edicion del acta"
+              title="Cancelar edicion (Esc)"
               (click)="cancelEditing()"
             >
               Cancelar
@@ -164,6 +94,7 @@
               type="button"
               [disabled]="isSaving || !draftResult.trim()"
               aria-label="Guardar cambios del acta"
+              title="Guardar cambios (Ctrl+S)"
               (click)="saveChanges()"
             >
               <i class="pi" [ngClass]="isSaving ? 'pi-spin pi-spinner' : 'pi-save'"></i>
@@ -175,52 +106,7 @@
 
       <ng-template #readMode>
         <article class="max-h-[calc(100vh-13rem)] overflow-auto rounded-lg border border-surface-200 bg-white px-6 py-6">
-          <ng-container *ngIf="renderedBlocks.length; else loadingActa">
-            <div class="mx-auto max-w-3xl">
-              <ng-container *ngFor="let block of renderedBlocks; trackBy: trackByIndex">
-                <h1 *ngIf="block.type === 'title'" class="mb-6 text-3xl font-semibold tracking-normal text-surface-900">
-                  {{ block.text }}
-                </h1>
-
-                <h2 *ngIf="block.type === 'heading'" class="mb-3 mt-8 text-2xl font-semibold tracking-normal text-surface-900">
-                  {{ block.text }}
-                </h2>
-
-                <h3 *ngIf="block.type === 'subheading'" class="mb-2 mt-5 text-base font-semibold tracking-normal text-surface-900">
-                  {{ block.text }}
-                </h3>
-
-                <div *ngIf="block.type === 'property'" class="mb-3 grid gap-2 text-sm sm:grid-cols-[170px_minmax(0,1fr)]">
-                  <span class="font-semibold text-slate-500">{{ block.label }}</span>
-                  <span class="font-medium text-surface-900">{{ block.value }}</span>
-                </div>
-
-                <p *ngIf="block.type === 'paragraph'" class="mb-4 text-sm leading-7 text-slate-700">
-                  {{ block.text }}
-                </p>
-
-                <div *ngIf="block.type === 'bullet'" class="mb-2 flex gap-3 text-sm leading-7 text-slate-700">
-                  <span class="mt-0.5 text-slate-500">•</span>
-                  <span>{{ block.text }}</span>
-                </div>
-
-                <div *ngIf="block.type === 'number'" class="mb-2 text-sm font-semibold leading-7 text-surface-900">
-                  {{ block.text }}
-                </div>
-
-                <label *ngIf="block.type === 'task'" class="mb-2 flex items-start gap-3 text-sm leading-7 text-slate-700">
-                  <input class="mt-1 h-4 w-4 rounded border-surface-200 text-brand-600" type="checkbox" [checked]="block.checked" disabled />
-                  <span>{{ block.text }}</span>
-                </label>
-
-                <hr *ngIf="block.type === 'divider'" class="my-6 border-surface-200" />
-              </ng-container>
-            </div>
-          </ng-container>
-
-          <ng-template #loadingActa>
-            <p class="text-sm leading-6 text-slate-500">Cargando contenido del acta.</p>
-          </ng-template>
+          <app-acta-renderer [content]="acta?.result || ''" />
         </article>
       </ng-template>
     </ng-container>

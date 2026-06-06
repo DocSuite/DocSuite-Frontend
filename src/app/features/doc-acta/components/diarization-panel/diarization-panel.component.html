@@ -1,0 +1,32 @@
+<aside class="rounded-lg border border-surface-200 bg-white p-4">
+  <div class="mb-3 flex items-center justify-between gap-3">
+    <div class="flex items-center gap-2 text-sm font-semibold text-surface-900">
+      <i class="pi pi-users text-brand-600"></i>
+      Diarizacion
+    </div>
+    <span class="text-xs font-semibold text-slate-500">{{ segments.length }} segmentos</span>
+  </div>
+
+  <div *ngIf="segments.length; else emptySegments" class="max-h-[34rem] space-y-3 overflow-auto pr-1">
+    <button
+      *ngFor="let segment of segments; let index = index; trackBy: trackByIndex"
+      class="w-full rounded-lg border px-3 py-3 text-left transition-colors hover:border-brand-600 hover:bg-surface-50"
+      type="button"
+      [ngClass]="activeSegmentIndex === index ? 'border-brand-600 bg-surface-50' : 'border-surface-200 bg-white'"
+      [attr.aria-label]="'Reproducir segmento de ' + segment.speaker + ' desde ' + formatTime(segment.start) + ' hasta ' + formatTime(segment.end)"
+      (click)="playSegmentRequest.emit({ segment: segment, index: index })"
+    >
+      <span class="flex items-center justify-between gap-3">
+        <span class="text-sm font-semibold text-surface-900">{{ segment.speaker }}</span>
+        <i class="pi text-xs text-brand-600" [ngClass]="activeSegmentIndex === index ? 'pi-volume-up' : 'pi-play'"></i>
+      </span>
+      <span class="mt-1 block text-xs font-medium text-slate-500">
+        {{ formatTime(segment.start) }} - {{ formatTime(segment.end) }}
+      </span>
+    </button>
+  </div>
+
+  <ng-template #emptySegments>
+    <p class="text-sm leading-6 text-slate-500">No hay segmentos de participantes para este audio.</p>
+  </ng-template>
+</aside>

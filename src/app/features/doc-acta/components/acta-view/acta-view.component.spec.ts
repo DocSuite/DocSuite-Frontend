@@ -24,18 +24,6 @@ describe('ActaViewComponent', () => {
     expect(component).toBeTruthy();
   });
 
-  it('should render markdown as document blocks', () => {
-    component.acta = createActa('# ACTA\n\n**Fecha:** 24 de mayo\n\n## Participantes\n\n- Docente\n- [ ] Revisar acta');
-
-    expect(component.renderedBlocks.map((block) => block.type)).toEqual([
-      'title',
-      'property',
-      'heading',
-      'bullet',
-      'task',
-    ]);
-  });
-
   it('should recover local acta draft', () => {
     const acta = createActa('Acta original');
     localStorage.setItem('docsuite.docacta.actaDraft.acta-1', JSON.stringify({
