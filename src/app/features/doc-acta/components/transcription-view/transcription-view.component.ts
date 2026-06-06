@@ -3,6 +3,7 @@ import {
   Component,
   ElementRef,
   EventEmitter,
+  HostListener,
   Input,
   OnChanges,
   OnDestroy,
@@ -11,15 +12,24 @@ import {
   ViewChild,
   inject,
 } from '@angular/core';
-import { FormsModule } from '@angular/forms';
 
 import { ConfirmDialogService } from '../../../../core/services/confirm-dialog.service';
+import { DiarizationPanelComponent } from '../diarization-panel/diarization-panel.component';
+import { SpeakerRenamePanelComponent } from '../speaker-rename-panel/speaker-rename-panel.component';
+import { TranscriptionEditorComponent } from '../transcription-editor/transcription-editor.component';
+import { TranscriptionReaderComponent } from '../transcription-reader/transcription-reader.component';
 import { Acta, ActaJob, DiarizationSegment } from '../../models/doc-acta.models';
 
 @Component({
   selector: 'app-transcription-view',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [
+    CommonModule,
+    DiarizationPanelComponent,
+    SpeakerRenamePanelComponent,
+    TranscriptionEditorComponent,
+    TranscriptionReaderComponent,
+  ],
   templateUrl: './transcription-view.component.html',
   styleUrl: './transcription-view.component.scss',
 })
@@ -47,18 +57,6 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
   activeSegmentIndex: number | null = null;
   activeSegmentEnd: number | null = null;
   playbackMessage: string | null = null;
-
-  get paragraphs(): string[] {
-    const text = this.acta?.transcription?.trim();
-    if (!text) {
-      return [];
-    }
-
-    return text
-      .split(/\r?\n+/)
-      .map((paragraph) => paragraph.trim())
-      .filter(Boolean);
-  }
 
   get segments(): DiarizationSegment[] {
     return this.acta?.diarization?.segments ?? [];
@@ -155,6 +153,24 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
     this.saveTranscription.emit(this.draftTranscription.trim());
   }
 
+  @HostListener('keydown', ['$event'])
+  handleEditorShortcut(event: KeyboardEvent): void {
+    if (!this.isEditing || this.isSaving) {
+      return;
+    }
+
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's' && this.draftTranscription.trim()) {
+      event.preventDefault();
+      this.saveChanges();
+      return;
+    }
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      void this.cancelEditing();
+    }
+  }
+
   finishSaving(): void {
     this.isEditing = false;
     this.clearLocalDraft();
@@ -222,6 +238,10 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
     }
   }
 
+  onPlaySegmentRequest(event: { segment: DiarizationSegment; index: number }): void {
+    this.playSegment(event.segment, event.index);
+  }
+
   onAudioTimeUpdate(): void {
     const player = this.audioPlayer?.nativeElement;
     if (!player || this.activeSegmentEnd === null) {
@@ -232,10 +252,6 @@ export class TranscriptionViewComponent implements OnChanges, OnDestroy {
       player.pause();
       this.activeSegmentEnd = null;
     }
-  }
-
-  trackByIndex(index: number): number {
-    return index;
   }
 
   private setAudioUrl(): void {

@@ -1,0 +1,11 @@
+<div class="max-h-[34rem] overflow-auto rounded-lg bg-white p-4">
+  <ng-container *ngIf="paragraphs.length; else emptyTranscription">
+    <p *ngFor="let paragraph of paragraphs" class="mb-4 text-sm leading-7 text-slate-700 last:mb-0">
+      {{ paragraph }}
+    </p>
+  </ng-container>
+</div>
+
+<ng-template #emptyTranscription>
+  <p class="text-sm leading-6 text-slate-500">La transcripcion llego vacia desde el backend.</p>
+</ng-template>

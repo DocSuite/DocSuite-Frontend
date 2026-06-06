@@ -55,151 +55,36 @@
     <div class="grid gap-5 2xl:grid-cols-[minmax(0,1fr)_320px]">
       <article class="rounded-lg border border-surface-200 bg-surface-50 p-4">
         <ng-container *ngIf="isEditing; else readTranscription">
-          <textarea
-            id="docacta-transcription-draft"
-            class="min-h-[28rem] w-full resize-y rounded-lg border border-surface-200 bg-white px-4 py-3 text-sm leading-7 text-surface-900 outline-none transition-colors focus:border-brand-600"
-            [(ngModel)]="draftTranscription"
-            [disabled]="isSaving"
-            aria-describedby="docacta-transcription-help docacta-transcription-draft-status"
-            aria-label="Editar transcripcion generada"
-            (ngModelChange)="onDraftChange()"
-          ></textarea>
-          <p id="docacta-transcription-help" class="mt-2 text-xs text-slate-500">
-            Los cambios se guardan como borrador local hasta que pulses Guardar transcripcion.
-          </p>
-          <p
-            *ngIf="draftStatus"
-            id="docacta-transcription-draft-status"
-            class="mt-2 text-xs font-semibold text-slate-600"
-            role="status"
-            aria-live="polite"
-          >
-            {{ draftStatus }}
-          </p>
-
-          <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
-            <button
-              class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
-              type="button"
-              [disabled]="isSaving"
-              aria-label="Cancelar edicion de transcripcion"
-              (click)="cancelEditing()"
-            >
-              Cancelar
-            </button>
-            <button
-              class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-              type="button"
-              [disabled]="isSaving || !draftTranscription.trim()"
-              aria-label="Guardar transcripcion editada"
-              (click)="saveChanges()"
-            >
-              <i class="pi" [ngClass]="isSaving ? 'pi-spin pi-spinner' : 'pi-save'"></i>
-              Guardar transcripcion
-            </button>
-          </div>
+          <app-transcription-editor
+            [(draftTranscription)]="draftTranscription"
+            [draftStatus]="draftStatus"
+            [isSaving]="isSaving"
+            (draftChange)="onDraftChange()"
+            (cancelEdit)="cancelEditing()"
+            (saveEdit)="saveChanges()"
+          />
         </ng-container>
 
         <ng-template #readTranscription>
-          <div class="max-h-[34rem] overflow-auto rounded-lg bg-white p-4">
-            <ng-container *ngIf="paragraphs.length; else emptyTranscription">
-              <p *ngFor="let paragraph of paragraphs" class="mb-4 text-sm leading-7 text-slate-700 last:mb-0">
-                {{ paragraph }}
-              </p>
-            </ng-container>
-          </div>
-        </ng-template>
-
-        <ng-template #emptyTranscription>
-          <p class="text-sm leading-6 text-slate-500">La transcripcion llego vacia desde el backend.</p>
+          <app-transcription-reader [transcription]="acta.transcription" />
         </ng-template>
       </article>
 
-      <aside class="rounded-lg border border-surface-200 bg-white p-4">
-        <div class="mb-3 flex items-center justify-between gap-3">
-          <div class="flex items-center gap-2 text-sm font-semibold text-surface-900">
-            <i class="pi pi-users text-brand-600"></i>
-            Diarizacion
-          </div>
-          <span class="text-xs font-semibold text-slate-500">{{ segments.length }} segmentos</span>
-        </div>
-
-        <div *ngIf="segments.length; else emptySegments" class="max-h-[34rem] space-y-3 overflow-auto pr-1">
-          <button
-            *ngFor="let segment of segments; let index = index; trackBy: trackByIndex"
-            class="w-full rounded-lg border px-3 py-3 text-left transition-colors hover:border-brand-600 hover:bg-surface-50"
-            type="button"
-            [ngClass]="activeSegmentIndex === index ? 'border-brand-600 bg-surface-50' : 'border-surface-200 bg-white'"
-            [attr.aria-label]="'Reproducir segmento de ' + segment.speaker + ' desde ' + formatTime(segment.start) + ' hasta ' + formatTime(segment.end)"
-            (click)="playSegment(segment, index)"
-          >
-            <span class="flex items-center justify-between gap-3">
-              <span class="text-sm font-semibold text-surface-900">{{ segment.speaker }}</span>
-              <i class="pi text-xs text-brand-600" [ngClass]="activeSegmentIndex === index ? 'pi-volume-up' : 'pi-play'"></i>
-            </span>
-            <span class="mt-1 block text-xs font-medium text-slate-500">
-              {{ formatTime(segment.start) }} - {{ formatTime(segment.end) }}
-            </span>
-          </button>
-        </div>
-
-        <ng-template #emptySegments>
-          <p class="text-sm leading-6 text-slate-500">No hay segmentos de participantes para este audio.</p>
-        </ng-template>
-      </aside>
+      <app-diarization-panel
+        [segments]="segments"
+        [activeSegmentIndex]="activeSegmentIndex"
+        (playSegmentRequest)="onPlaySegmentRequest($event)"
+      />
     </div>
 
-    <section *ngIf="isRenamingSpeakers" class="mt-5 rounded-lg border border-surface-200 bg-surface-50 p-4">
-      <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h3 class="text-sm font-semibold text-surface-900">Renombrar participantes</h3>
-          <p class="mt-1 text-sm text-slate-600">Asigna nombres reales para que el acta sea más clara.</p>
-        </div>
-        <button
-          class="flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 bg-white text-slate-500 transition-colors hover:text-red-600"
-          type="button"
-          (click)="closeSpeakerEditor()"
-          aria-label="Cerrar edición de participantes"
-        >
-          <i class="pi pi-times"></i>
-        </button>
-      </div>
-
-      <div class="grid gap-3 md:grid-cols-2">
-        <label *ngFor="let speaker of speakers" class="block rounded-lg border border-surface-200 bg-white p-3">
-          <span class="mb-2 block text-xs font-semibold uppercase text-slate-500">{{ speaker }}</span>
-          <input
-            class="w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-900 outline-none transition-colors focus:border-brand-600"
-            type="text"
-            [(ngModel)]="speakerDraft[speaker]"
-            [disabled]="isSavingSpeakers"
-            [attr.aria-label]="'Nombre visible para ' + speaker"
-          />
-        </label>
-      </div>
-
-      <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
-        <button
-          class="inline-flex items-center justify-center rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
-          type="button"
-          [disabled]="isSavingSpeakers"
-          aria-label="Cancelar renombrado de participantes"
-          (click)="closeSpeakerEditor()"
-        >
-          Cancelar
-        </button>
-        <button
-          class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
-          type="button"
-          [disabled]="isSavingSpeakers"
-          aria-label="Guardar nombres de participantes"
-          (click)="saveSpeakerNames()"
-        >
-          <i class="pi" [ngClass]="isSavingSpeakers ? 'pi-spin pi-spinner' : 'pi-save'"></i>
-          Guardar participantes
-        </button>
-      </div>
-    </section>
+    <app-speaker-rename-panel
+      *ngIf="isRenamingSpeakers"
+      [speakers]="speakers"
+      [(speakerDraft)]="speakerDraft"
+      [isSavingSpeakers]="isSavingSpeakers"
+      (closeEditor)="closeSpeakerEditor()"
+      (saveSpeakers)="saveSpeakerNames()"
+    />
   </ng-container>
 
   <ng-template #processingState>

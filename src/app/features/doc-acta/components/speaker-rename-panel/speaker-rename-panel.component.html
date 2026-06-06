@@ -1,0 +1,52 @@
+<section class="mt-5 rounded-lg border border-surface-200 bg-surface-50 p-4">
+  <div class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div>
+      <h3 class="text-sm font-semibold text-surface-900">Renombrar participantes</h3>
+      <p class="mt-1 text-sm text-slate-600">Asigna nombres reales para que el acta sea mas clara.</p>
+    </div>
+    <button
+      class="flex h-9 w-9 items-center justify-center rounded-lg border border-surface-200 bg-white text-slate-500 transition-colors hover:text-red-600"
+      type="button"
+      (click)="closeEditor.emit()"
+      aria-label="Cerrar edicion de participantes"
+    >
+      <i class="pi pi-times"></i>
+    </button>
+  </div>
+
+  <div class="grid gap-3 md:grid-cols-2">
+    <label *ngFor="let speaker of speakers" class="block rounded-lg border border-surface-200 bg-white p-3">
+      <span class="mb-2 block text-xs font-semibold uppercase text-slate-500">{{ speaker }}</span>
+      <input
+        class="w-full rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm text-surface-900 outline-none transition-colors focus:border-brand-600"
+        type="text"
+        [ngModel]="speakerDraft[speaker]"
+        [disabled]="isSavingSpeakers"
+        [attr.aria-label]="'Nombre visible para ' + speaker"
+        (ngModelChange)="onSpeakerNameChange(speaker, $event)"
+      />
+    </label>
+  </div>
+
+  <div class="mt-4 flex flex-col gap-3 sm:flex-row sm:justify-end">
+    <button
+      class="inline-flex items-center justify-center rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600 disabled:cursor-not-allowed disabled:text-slate-300"
+      type="button"
+      [disabled]="isSavingSpeakers"
+      aria-label="Cancelar renombrado de participantes"
+      (click)="closeEditor.emit()"
+    >
+      Cancelar
+    </button>
+    <button
+      class="inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+      type="button"
+      [disabled]="isSavingSpeakers"
+      aria-label="Guardar nombres de participantes"
+      (click)="saveSpeakers.emit()"
+    >
+      <i class="pi" [ngClass]="isSavingSpeakers ? 'pi-spin pi-spinner' : 'pi-save'"></i>
+      Guardar participantes
+    </button>
+  </div>
+</section>

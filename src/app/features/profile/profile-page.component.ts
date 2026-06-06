@@ -3,11 +3,14 @@ import { Component, inject, OnInit, signal } from '@angular/core';
 
 import { User } from '../../core/auth/auth.models';
 import { AuthService } from '../../core/auth/auth.service';
+import { AlertMessageComponent } from '../../shared/components/alert-message/alert-message.component';
+import { LoadingStateComponent } from '../../shared/components/loading-state/loading-state.component';
+import { PageHeaderComponent } from '../../shared/components/page-header/page-header.component';
 
 @Component({
   selector: 'app-profile-page',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, AlertMessageComponent, LoadingStateComponent, PageHeaderComponent],
   templateUrl: './profile-page.component.html',
   styleUrl: './profile-page.component.scss',
 })
