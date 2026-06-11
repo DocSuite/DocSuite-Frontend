@@ -28,6 +28,13 @@ export class ProfilePageComponent implements OnInit {
   readonly errorMessage = signal<string | null>(null);
   readonly fullNameDraft = signal('');
   readonly canUpdateProfile = computed(() => this.authService.canUpdatePath('/profile'));
+  readonly profileValidationMessage = computed(() => {
+    const fullName = this.fullNameDraft().trim();
+    if (fullName.length < 2 || fullName.length > 255) {
+      return 'El nombre debe tener entre 2 y 255 caracteres.';
+    }
+    return null;
+  });
 
   ngOnInit(): void {
     this.isLoading.set(true);
@@ -64,8 +71,9 @@ export class ProfilePageComponent implements OnInit {
 
   saveProfile(): void {
     const fullName = this.fullNameDraft().trim();
-    if (!fullName || fullName.length < 2) {
-      this.errorMessage.set('Ingresa un nombre valido.');
+    const validationMessage = this.profileValidationMessage();
+    if (validationMessage) {
+      this.errorMessage.set(validationMessage);
       return;
     }
 

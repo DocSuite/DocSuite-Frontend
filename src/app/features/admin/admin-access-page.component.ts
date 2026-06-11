@@ -11,6 +11,7 @@ import { AdminAccessService } from './admin-access.service';
 import { AdminUser, RolePermission } from './admin-access.models';
 
 type AdminTab = 'users' | 'roles' | 'permissions';
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 @Component({
   selector: 'app-admin-access-page',
@@ -45,6 +46,38 @@ export class AdminAccessPageComponent implements OnInit {
   readonly selectedRole = computed(() => {
     const roleId = this.selectedRoleId();
     return this.roles().find((role) => role.id === roleId) ?? null;
+  });
+  readonly roleValidationMessage = computed(() => {
+    const name = this.roleName().trim();
+    const description = this.roleDescription().trim();
+    if (!name) {
+      return 'Ingresa un nombre para el rol.';
+    }
+    if (name.length < 2 || name.length > 80) {
+      return 'El nombre del rol debe tener entre 2 y 80 caracteres.';
+    }
+    if (description.length > 250) {
+      return 'La descripcion no puede superar 250 caracteres.';
+    }
+    return null;
+  });
+  readonly userValidationMessage = computed(() => {
+    const fullName = this.userFullName().trim();
+    const email = this.userEmail().trim();
+    const dni = this.userDni().replace(/\D/g, '');
+    if (fullName.length < 2 || fullName.length > 255) {
+      return 'El nombre debe tener entre 2 y 255 caracteres.';
+    }
+    if (!EMAIL_PATTERN.test(email)) {
+      return 'Ingresa un correo valido.';
+    }
+    if (!/^\d{8}$/.test(dni)) {
+      return 'El DNI debe tener 8 digitos.';
+    }
+    if (!this.userRoleId()) {
+      return 'Selecciona un rol.';
+    }
+    return null;
   });
 
   ngOnInit(): void {
@@ -142,8 +175,12 @@ export class AdminAccessPageComponent implements OnInit {
     const email = this.userEmail().trim().toLowerCase();
     const dni = this.userDni().replace(/\D/g, '').slice(0, 8);
 
-    if (!fullName || !email || !roleId || !/^\d{8}$/.test(dni)) {
-      this.errorMessage.set('Completa nombre, correo, DNI de 8 digitos y rol.');
+    const validationMessage = this.userValidationMessage();
+    if (validationMessage) {
+      this.errorMessage.set(validationMessage);
+      return;
+    }
+    if (!roleId) {
       return;
     }
 
@@ -196,8 +233,9 @@ export class AdminAccessPageComponent implements OnInit {
       description: this.roleDescription().trim() || null,
     };
 
-    if (!payload.name) {
-      this.errorMessage.set('Ingresa un nombre para el rol.');
+    const validationMessage = this.roleValidationMessage();
+    if (validationMessage) {
+      this.errorMessage.set(validationMessage);
       return;
     }
 
