@@ -31,7 +31,7 @@ export class SidebarComponent implements OnInit {
 
   readonly workspaceItems: SidebarItem[] = [
     { label: 'Dashboard', icon: 'pi-home', route: '/dashboard' },
-    { label: 'DocAnalyzer', icon: 'pi-file', route: '/dashboard', badge: 'Pronto', disabled: true },
+    { label: 'DocAnalyzer', icon: 'pi-file', route: '/doc-analyzer' },
     { label: 'DocActa', icon: 'pi-microphone', route: '/doc-acta' },
     { label: 'Historial', icon: 'pi-history', route: '/history' },
     { label: 'Auditorias', icon: 'pi-shield', route: '/audits' },

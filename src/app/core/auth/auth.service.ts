@@ -27,6 +27,7 @@ export class AuthService {
   private readonly protectedPaths = [
     { route: '/dashboard', permission: '/dashboard' },
     { route: '/profile', permission: '/profile' },
+    { route: '/doc-analyzer', permission: '/doc-analyzer' },
     { route: '/doc-acta', permission: '/doc-acta' },
     { route: '/history', permission: '/history' },
     { route: '/audits', permission: '/audits' },

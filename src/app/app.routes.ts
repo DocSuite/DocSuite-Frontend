@@ -44,6 +44,13 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'doc-analyzer',
+        loadComponent: () =>
+          import('./features/doc-analyzer/doc-analyzer-page.component').then(
+            (module) => module.DocAnalyzerPageComponent,
+          ),
+      },
+      {
         path: 'doc-acta',
         loadComponent: () =>
           import('./features/doc-acta/pages/doc-acta-page.component').then(
