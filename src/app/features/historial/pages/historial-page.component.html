@@ -3,7 +3,7 @@
     <app-page-header
       eyebrow="DocSuite / Historial"
       title="Historial"
-      description="Actas generadas previamente en DocActa."
+      description="Actas y documentos analizados previamente."
     >
       <button
         pageHeaderActions
@@ -18,7 +18,39 @@
 
     <app-alert-message [message]="errorMessage()" />
 
-    <section class="overflow-hidden rounded-xl border border-surface-200 bg-white">
+    <div class="mb-5 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div class="inline-flex rounded-lg border border-surface-200 bg-white p-1">
+        <button
+          class="rounded-md px-4 py-2 text-sm font-semibold transition-colors"
+          [ngClass]="activeView() === 'actas' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-surface-50'"
+          type="button"
+          (click)="setView('actas')"
+        >
+          Actas
+        </button>
+        <button
+          class="rounded-md px-4 py-2 text-sm font-semibold transition-colors"
+          [ngClass]="activeView() === 'documents' ? 'bg-brand-600 text-white' : 'text-slate-600 hover:bg-surface-50'"
+          type="button"
+          (click)="setView('documents')"
+        >
+          Documentos
+        </button>
+      </div>
+
+      <label class="flex min-w-0 items-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 lg:w-80">
+        <i class="pi pi-search text-sm text-slate-400"></i>
+        <input
+          class="min-w-0 flex-1 bg-transparent text-sm text-surface-900 outline-none placeholder:text-slate-400"
+          type="search"
+          placeholder="Buscar por archivo, modo o ID"
+          [value]="searchTerm()"
+          (input)="onSearch($any($event.target).value)"
+        />
+      </label>
+    </div>
+
+    <section *ngIf="activeView() === 'actas'" class="overflow-hidden rounded-xl border border-surface-200 bg-white">
       <div class="grid grid-cols-[1.4fr_0.8fr_0.8fr_0.7fr_auto] gap-4 border-b border-surface-200 bg-surface-50 px-5 py-3 text-xs font-semibold uppercase text-slate-500">
         <span>Archivo</span>
         <span>Duracion</span>
@@ -30,7 +62,7 @@
       <app-loading-state [visible]="isLoading()" message="Cargando historial." containerClass="px-5 py-6" />
 
       <article
-        *ngFor="let acta of actas()"
+        *ngFor="let acta of filteredActas()"
         class="grid grid-cols-[1.4fr_0.8fr_0.8fr_0.7fr_auto] gap-4 border-b border-surface-200 px-5 py-4 text-sm last:border-b-0"
       >
         <div class="min-w-0">
@@ -50,8 +82,61 @@
         </a>
       </article>
 
-      <p *ngIf="!isLoading() && !actas().length" class="px-5 py-6 text-sm text-slate-500">
-        Todavia no hay actas registradas.
+      <p *ngIf="!isLoading() && !filteredActas().length" class="px-5 py-6 text-sm text-slate-500">
+        No hay actas para mostrar.
+      </p>
+    </section>
+
+    <section *ngIf="activeView() === 'documents'" class="overflow-hidden rounded-xl border border-surface-200 bg-white">
+      <div class="grid grid-cols-[1.4fr_0.6fr_0.8fr_auto] gap-4 border-b border-surface-200 bg-surface-50 px-5 py-3 text-xs font-semibold uppercase text-slate-500">
+        <span>Archivo</span>
+        <span>Modo</span>
+        <span>Fecha</span>
+        <span></span>
+      </div>
+
+      <app-loading-state [visible]="isLoading()" message="Cargando documentos." containerClass="px-5 py-6" />
+
+      <article
+        *ngFor="let analysis of filteredAnalyses()"
+        class="grid grid-cols-[1.4fr_0.6fr_0.8fr_auto] gap-4 border-b border-surface-200 px-5 py-4 text-sm last:border-b-0"
+      >
+        <div class="min-w-0">
+          <p class="truncate font-semibold text-surface-900">{{ analysis.filename }}</p>
+          <p class="mt-1 truncate text-xs text-slate-500">{{ analysis.id }}</p>
+        </div>
+        <span class="text-slate-600">{{ formatMode(analysis.mode) }}</span>
+        <span class="text-slate-500">{{ formatDate(analysis.created_at) }}</span>
+        <div class="flex flex-wrap justify-end gap-2">
+          <a
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+            routerLink="/doc-analyzer"
+            [queryParams]="{ analysisId: analysis.id }"
+          >
+            <i class="pi pi-eye"></i>
+            Ver
+          </a>
+          <button
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+            type="button"
+            (click)="downloadAnalysisDocx(analysis)"
+          >
+            <i class="pi pi-file-word"></i>
+            DOCX
+          </button>
+          <button
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+            type="button"
+            (click)="downloadAnalysisJson(analysis)"
+          >
+            <i class="pi pi-download"></i>
+            JSON
+          </button>
+        </div>
+      </article>
+
+      <p *ngIf="!isLoading() && !filteredAnalyses().length" class="px-5 py-6 text-sm text-slate-500">
+        No hay documentos para mostrar.
       </p>
     </section>
   </section>

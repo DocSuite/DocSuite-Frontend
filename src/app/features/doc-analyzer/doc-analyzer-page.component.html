@@ -1,0 +1,365 @@
+<main class="min-h-screen bg-surface-50 p-4 text-surface-900 sm:p-6 lg:p-8">
+  <section class="w-full">
+    <app-page-header
+      eyebrow="DocSuite / DocAnalyzer"
+      title="DocAnalyzer"
+      description="Analiza documentos academicos, profesionales o tecnicos con IA."
+    >
+      <div *ngIf="analysisResult()" pageHeaderActions class="flex flex-wrap gap-2">
+        <button
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+          type="button"
+          (click)="copyResult()"
+        >
+          <i class="pi pi-copy"></i>
+          Copiar analisis
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+          type="button"
+          (click)="copyExtractedText()"
+        >
+          <i class="pi pi-align-left"></i>
+          Copiar extraccion
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+          type="button"
+          (click)="downloadDocx()"
+        >
+          <i class="pi pi-file-word"></i>
+          DOCX
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+          type="button"
+          (click)="downloadResult()"
+        >
+          <i class="pi pi-download"></i>
+          JSON
+        </button>
+        <button
+          class="inline-flex items-center justify-center gap-2 rounded-lg border border-surface-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:border-brand-600 hover:text-brand-600"
+          type="button"
+          (click)="downloadExtractedText()"
+        >
+          <i class="pi pi-file-export"></i>
+          TXT
+        </button>
+      </div>
+    </app-page-header>
+
+    <app-alert-message [message]="errorMessage()" />
+
+    <p *ngIf="successMessage()" class="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">
+      {{ successMessage() }}
+    </p>
+
+    <section class="grid gap-5 xl:grid-cols-[360px_1fr]">
+      <aside class="space-y-5">
+        <section class="rounded-xl border border-surface-200 bg-white p-5">
+          <h2 class="text-base font-semibold text-surface-900">Documento</h2>
+          <p class="mt-1 text-sm text-slate-500">PDF, DOCX, TXT o MD.</p>
+
+          <label
+            class="mt-4 flex cursor-pointer flex-col items-center justify-center rounded-xl border border-dashed border-surface-200 bg-surface-50 px-4 py-8 text-center transition-colors hover:border-brand-600 hover:bg-white"
+          >
+            <i class="pi pi-upload mb-3 text-xl text-brand-600"></i>
+            <span class="text-sm font-semibold text-surface-900">Seleccionar archivo</span>
+            <span class="mt-1 text-xs text-slate-500">Maximo 200 MB</span>
+            <input class="hidden" type="file" accept=".pdf,.docx,.txt,.md" (change)="onFileSelected($event)" />
+          </label>
+
+          <div *ngIf="selectedFile() as file" class="mt-4 rounded-lg border border-surface-200 bg-surface-50 p-3">
+            <p class="truncate text-sm font-semibold text-surface-900">{{ file.name }}</p>
+            <p class="mt-1 text-xs text-slate-500">{{ formatFileSize(file) }}</p>
+          </div>
+        </section>
+
+        <section class="rounded-xl border border-surface-200 bg-white p-5">
+          <h2 class="text-base font-semibold text-surface-900">Modo</h2>
+          <div class="mt-4 grid gap-3">
+            <label class="cursor-pointer rounded-lg border border-surface-200 bg-surface-50 p-4 transition-colors hover:border-brand-600 hover:bg-white">
+              <span class="flex items-start gap-3">
+                <input
+                  class="mt-1"
+                  type="radio"
+                  name="analysisMode"
+                  value="general"
+                  [ngModel]="mode()"
+                  (ngModelChange)="mode.set($event)"
+                />
+                <span>
+                  <span class="block text-sm font-semibold text-surface-900">Extractor general</span>
+                  <span class="mt-1 block text-xs leading-5 text-slate-500">Resumen, puntos clave, secciones, datos y conclusiones.</span>
+                </span>
+              </span>
+            </label>
+
+            <label class="cursor-pointer rounded-lg border border-surface-200 bg-surface-50 p-4 transition-colors hover:border-brand-600 hover:bg-white">
+              <span class="flex items-start gap-3">
+                <input
+                  class="mt-1"
+                  type="radio"
+                  name="analysisMode"
+                  value="academic"
+                  [ngModel]="mode()"
+                  (ngModelChange)="mode.set($event)"
+                />
+                <span>
+                  <span class="block text-sm font-semibold text-surface-900">Analizador academico</span>
+                  <span class="mt-1 block text-xs leading-5 text-slate-500">Investigacion, metodologia, poblacion, muestra y citas.</span>
+                </span>
+              </span>
+            </label>
+          </div>
+
+          <button
+            class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+            type="button"
+            [disabled]="isLoading() || !selectedFile()"
+            (click)="analyze()"
+          >
+            <i class="pi" [ngClass]="isLoading() ? 'pi-spin pi-spinner' : 'pi-sparkles'"></i>
+            Analizar documento
+          </button>
+        </section>
+      </aside>
+
+      <section class="min-w-0 space-y-5">
+        <section *ngIf="isLoading() && currentJob() as job" class="rounded-xl border border-surface-200 bg-white p-5">
+          <div class="mb-4 flex items-center justify-between gap-4">
+            <div>
+              <h2 class="text-base font-semibold text-surface-900">Progreso</h2>
+              <p class="mt-1 text-sm text-slate-500">{{ job.message }}</p>
+            </div>
+            <span class="rounded-full border border-surface-200 bg-surface-50 px-3 py-1 text-xs font-semibold text-slate-600">
+              {{ job.progress }}%
+            </span>
+          </div>
+          <div class="h-3 overflow-hidden rounded-full bg-surface-100">
+            <span class="block h-full rounded-full bg-brand-600 transition-all" [style.width.%]="job.progress"></span>
+          </div>
+          <p class="mt-3 text-xs leading-5 text-slate-500">
+            Los documentos extensos se procesan por fragmentos para evitar limites de IA.
+          </p>
+        </section>
+
+        <app-loading-state [visible]="isLoading() && !currentJob()" message="Preparando analisis." containerClass="rounded-xl border border-surface-200 bg-white px-5 py-6" />
+
+        <section *ngIf="!isLoading() && !analysisResult()" class="rounded-xl border border-surface-200 bg-white p-8 text-center">
+          <i class="pi pi-file-search text-3xl text-brand-600"></i>
+          <h2 class="mt-4 text-lg font-semibold text-surface-900">Sin analisis generado</h2>
+          <p class="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
+            Selecciona un documento y un modo de analisis para obtener un resultado estructurado.
+          </p>
+        </section>
+
+        <ng-container *ngIf="analysisResult() as result">
+          <section class="rounded-xl border border-surface-200 bg-white p-5">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+              <div>
+                <p class="text-xs font-semibold uppercase text-slate-500">{{ result.language || 'Idioma detectado' }}</p>
+                <h2 class="mt-2 text-xl font-semibold text-surface-900">
+                  {{ result.title || result.identification?.title || analysis()?.filename }}
+                </h2>
+                <p class="mt-2 text-sm text-slate-500">
+                  {{ result.document_type || result.identification?.document_type || 'Documento analizado' }}
+                </p>
+              </div>
+              <span class="rounded-full border border-surface-200 bg-surface-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                {{ analysis()?.mode === 'academic' ? 'Academico' : 'General' }}
+              </span>
+            </div>
+
+            <p *ngIf="result.executive_summary" class="mt-5 rounded-lg border border-surface-200 bg-surface-50 p-4 text-sm leading-6 text-slate-700">
+              {{ result.executive_summary }}
+            </p>
+          </section>
+
+          <section *ngIf="asDocumentElements(result.document_elements).length" class="rounded-xl border border-surface-200 bg-white p-5">
+            <h3 class="text-base font-semibold text-surface-900">Elementos detectados</h3>
+            <div class="mt-4 grid gap-3 lg:grid-cols-2">
+              <article *ngFor="let element of asDocumentElements(result.document_elements)" class="rounded-lg border border-surface-200 bg-surface-50 p-4">
+                <div class="mb-2 flex items-center justify-between gap-3">
+                  <p class="text-sm font-semibold capitalize text-surface-900">{{ element.type || 'elemento' }}</p>
+                  <span class="rounded-full border border-surface-200 bg-white px-2 py-0.5 text-xs font-semibold text-slate-600">
+                    {{ element.interpreted ? 'Interpretado' : 'Detectado' }}
+                  </span>
+                </div>
+                <p class="text-sm leading-6 text-slate-700">{{ element.description }}</p>
+                <p *ngIf="element.source" class="mt-2 text-xs font-semibold text-slate-500">{{ element.source }}</p>
+              </article>
+            </div>
+          </section>
+
+          <section *ngIf="analysis()?.mode === 'general'" class="grid gap-5 xl:grid-cols-2">
+            <section class="rounded-xl border border-surface-200 bg-white p-5">
+              <h3 class="text-base font-semibold text-surface-900">Puntos clave</h3>
+              <ul class="mt-4 space-y-3">
+                <li *ngFor="let point of asTextList(result.key_points)" class="flex gap-3 text-sm leading-6 text-slate-700">
+                  <i class="pi pi-check-circle mt-1 text-brand-600"></i>
+                  <span>{{ point }}</span>
+                </li>
+              </ul>
+            </section>
+
+            <section class="rounded-xl border border-surface-200 bg-white p-5">
+              <h3 class="text-base font-semibold text-surface-900">Datos importantes</h3>
+              <div class="mt-4 space-y-3">
+                <article *ngFor="let item of asImportantData(result.important_data)" class="rounded-lg border border-surface-200 bg-surface-50 p-4">
+                  <p class="text-sm font-semibold text-surface-900">{{ item.label }}</p>
+                  <p class="mt-1 text-sm text-slate-700">{{ item.value }}</p>
+                  <p *ngIf="item.context" class="mt-2 text-xs leading-5 text-slate-500">{{ item.context }}</p>
+                  <p *ngIf="item.source" class="mt-2 text-xs font-semibold text-slate-500">{{ item.source }}</p>
+                </article>
+              </div>
+            </section>
+
+            <section class="rounded-xl border border-surface-200 bg-white p-5 xl:col-span-2">
+              <h3 class="text-base font-semibold text-surface-900">Secciones principales</h3>
+              <div class="mt-4 grid gap-3 lg:grid-cols-2">
+                <article *ngFor="let section of asSections(result.main_sections)" class="rounded-lg border border-surface-200 bg-surface-50 p-4">
+                  <p class="text-sm font-semibold text-surface-900">{{ section.title }}</p>
+                  <p class="mt-2 text-sm leading-6 text-slate-600">{{ section.summary }}</p>
+                </article>
+              </div>
+            </section>
+
+            <section class="rounded-xl border border-surface-200 bg-white p-5 xl:col-span-2">
+              <h3 class="text-base font-semibold text-surface-900">Conclusiones</h3>
+              <ul class="mt-4 space-y-3">
+                <li *ngFor="let conclusion of generalConclusions(result.conclusions)" class="flex gap-3 text-sm leading-6 text-slate-700">
+                  <i class="pi pi-angle-right mt-1 text-brand-600"></i>
+                  <span>{{ conclusion }}</span>
+                </li>
+              </ul>
+            </section>
+          </section>
+
+          <section *ngIf="analysis()?.mode === 'academic'" class="space-y-5">
+            <section class="grid gap-5 xl:grid-cols-2">
+              <article class="rounded-xl border border-surface-200 bg-white p-5">
+                <h3 class="text-base font-semibold text-surface-900">Investigacion</h3>
+                <dl class="mt-4 space-y-3 text-sm">
+                  <div>
+                    <dt class="font-semibold text-slate-500">Objetivo</dt>
+                    <dd class="mt-1 leading-6 text-slate-700">{{ result.research?.main_objective || 'No se menciona.' }}</dd>
+                  </div>
+                  <div>
+                    <dt class="font-semibold text-slate-500">Pregunta</dt>
+                    <dd class="mt-1 leading-6 text-slate-700">{{ result.research?.research_question || 'No se menciona.' }}</dd>
+                  </div>
+                  <div>
+                    <dt class="font-semibold text-slate-500">Problema</dt>
+                    <dd class="mt-1 leading-6 text-slate-700">{{ result.research?.problem || 'No se menciona.' }}</dd>
+                  </div>
+                </dl>
+              </article>
+
+              <article class="rounded-xl border border-surface-200 bg-white p-5">
+                <h3 class="text-base font-semibold text-surface-900">Metodologia</h3>
+                <dl class="mt-4 space-y-3 text-sm">
+                  <div>
+                    <dt class="font-semibold text-slate-500">Enfoque</dt>
+                    <dd class="mt-1 leading-6 text-slate-700">{{ result.methodology?.approach || 'No se menciona.' }}</dd>
+                  </div>
+                  <div>
+                    <dt class="font-semibold text-slate-500">Diseno</dt>
+                    <dd class="mt-1 leading-6 text-slate-700">{{ result.methodology?.design || 'No se menciona.' }}</dd>
+                  </div>
+                </dl>
+                <div *ngIf="asMethodologyEvidence(result.methodology?.evidence).length" class="mt-4 space-y-3">
+                  <article *ngFor="let evidence of asMethodologyEvidence(result.methodology?.evidence)" class="rounded-lg border border-surface-200 bg-surface-50 p-3">
+                    <p class="text-xs font-semibold uppercase text-slate-500">{{ evidence.field }}</p>
+                    <p class="mt-1 text-sm leading-6 text-slate-700">{{ evidence.excerpt }}</p>
+                    <p *ngIf="evidence.source" class="mt-2 text-xs font-semibold text-slate-500">{{ evidence.source }}</p>
+                  </article>
+                </div>
+              </article>
+            </section>
+
+            <section class="grid gap-5 xl:grid-cols-2">
+              <article class="rounded-xl border border-surface-200 bg-white p-5">
+                <h3 class="text-base font-semibold text-surface-900">Poblacion</h3>
+                <p class="mt-3 text-sm leading-6 text-slate-700">{{ result.methodology?.population || 'No se menciona.' }}</p>
+              </article>
+
+              <article class="rounded-xl border border-surface-200 bg-white p-5">
+                <h3 class="text-base font-semibold text-surface-900">Muestra</h3>
+                <p class="mt-3 text-sm leading-6 text-slate-700">{{ result.methodology?.sample || 'No se menciona.' }}</p>
+              </article>
+            </section>
+
+            <section class="rounded-xl border border-surface-200 bg-white p-5">
+              <h3 class="text-base font-semibold text-surface-900">Resultados</h3>
+              <ul class="mt-4 space-y-3">
+                <li *ngFor="let item of asTextList(result.results)" class="flex gap-3 text-sm leading-6 text-slate-700">
+                  <i class="pi pi-chart-line mt-1 text-brand-600"></i>
+                  <span>{{ item }}</span>
+                </li>
+              </ul>
+            </section>
+
+            <section *ngIf="academicConclusions(result.conclusions) as conclusions" class="rounded-xl border border-surface-200 bg-white p-5">
+              <h3 class="text-base font-semibold text-surface-900">Conclusiones</h3>
+              <p class="mt-3 rounded-lg border border-surface-200 bg-surface-50 p-4 text-sm leading-6 text-slate-700">
+                {{ conclusions.general_conclusion || 'No se menciona.' }}
+              </p>
+              <p *ngIf="conclusions.implications" class="mt-3 text-sm leading-6 text-slate-700">
+                {{ conclusions.implications }}
+              </p>
+              <div class="mt-4 grid gap-4 lg:grid-cols-2">
+                <div>
+                  <p class="text-sm font-semibold text-surface-900">Limitaciones</p>
+                  <ul class="mt-2 space-y-2 text-sm text-slate-600">
+                    <li *ngFor="let item of asTextList(conclusions.limitations)">- {{ item }}</li>
+                  </ul>
+                </div>
+                <div>
+                  <p class="text-sm font-semibold text-surface-900">Recomendaciones futuras</p>
+                  <ul class="mt-2 space-y-2 text-sm text-slate-600">
+                    <li *ngFor="let item of asTextList(conclusions.future_recommendations)">- {{ item }}</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section class="rounded-xl border border-surface-200 bg-white p-5">
+              <h3 class="text-base font-semibold text-surface-900">Citas utiles</h3>
+              <div class="mt-4 grid gap-3">
+                <blockquote *ngFor="let quote of asQuotes(result.useful_quotes)" class="rounded-lg border border-surface-200 bg-surface-50 p-4">
+                  <p class="text-sm leading-6 text-slate-700">"{{ quote.text }}"</p>
+                  <footer class="mt-3 text-xs font-semibold text-slate-500">{{ quote.location || 'Ubicacion no detectada' }}</footer>
+                </blockquote>
+              </div>
+            </section>
+
+            <section class="grid gap-5 xl:grid-cols-2">
+              <article class="rounded-xl border border-surface-200 bg-white p-5">
+                <h3 class="text-base font-semibold text-surface-900">Aporte al campo</h3>
+                <p class="mt-3 text-sm leading-6 text-slate-700">{{ result.field_contribution || 'No se menciona.' }}</p>
+              </article>
+
+              <article class="rounded-xl border border-surface-200 bg-white p-5">
+                <h3 class="text-base font-semibold text-surface-900">Relevancia para tu tesis</h3>
+                <p class="mt-3 text-sm font-semibold text-brand-600">{{ result.thesis_relevance?.level || 'Sin nivel detectado' }}</p>
+                <p class="mt-2 text-sm leading-6 text-slate-700">{{ result.thesis_relevance?.reason || 'No se menciona.' }}</p>
+                <p class="mt-2 text-xs leading-5 text-slate-500">{{ result.thesis_relevance?.possible_use }}</p>
+              </article>
+            </section>
+          </section>
+
+          <section *ngIf="asTextList(result.keywords).length" class="rounded-xl border border-surface-200 bg-white p-5">
+            <h3 class="text-base font-semibold text-surface-900">Palabras clave</h3>
+            <div class="mt-4 flex flex-wrap gap-2">
+              <span *ngFor="let keyword of asTextList(result.keywords)" class="rounded-full border border-surface-200 bg-surface-50 px-3 py-1 text-xs font-semibold text-slate-600">
+                {{ keyword }}
+              </span>
+            </div>
+          </section>
+        </ng-container>
+      </section>
+    </section>
+  </section>
+</main>
